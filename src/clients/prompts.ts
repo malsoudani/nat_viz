@@ -76,7 +76,8 @@ SVG GENERATION FUNCTION:
 11. For pie charts: Include percentage labels and a legend
 12. Ensure all visualizations are self-explanatory with proper data identification
 13. The SVG function must be completely self-sufficient and cannot rely on any external methods, dependencies, or functions provided outside of the function itself. It should only use standard JavaScript and SVG DOM methods.
-14. Pay attention to user requests for specific styling or features
+14. The SVG function cannot use D3.js or any external libraries - it must draw everything using raw SVG elements and standard JavaScript
+15. Pay attention to user requests for specific styling or features
 
 DESIGN PRINCIPLES:
 - Modern gradients and color schemes
