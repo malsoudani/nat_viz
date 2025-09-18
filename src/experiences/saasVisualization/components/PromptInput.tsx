@@ -26,7 +26,7 @@ export const PromptInput: React.FC<PromptInputProps> = ({
     try {
       emitEvent(new CreateVisualizationRequested(prompt.trim()));
       onCreateVisualization?.(prompt.trim());
-      setPrompt("");
+      // Keep the prompt text in the input box instead of clearing it
     } catch (error) {
       console.error("Failed to create visualization:", error);
     } finally {
@@ -47,6 +47,7 @@ export const PromptInput: React.FC<PromptInputProps> = ({
             className="block text-sm font-medium text-gray-700 mb-2"
           >
             Describe your visualization
+            <span className="text-xs text-gray-500 ml-2">(text will be preserved after creation)</span>
           </label>
           <textarea
             id="prompt"
@@ -94,6 +95,11 @@ export const PromptInput: React.FC<PromptInputProps> = ({
             </span>
           ) : (
             "Create Visualization"
+          )}
+          {!isLoading && prompt.trim() && (
+            <span className="text-xs text-gray-500 mt-1 block">
+              Your prompt will remain in the input box for easy editing
+            </span>
           )}
         </button>
       </form>

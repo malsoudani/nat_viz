@@ -1,5 +1,5 @@
-import React from "react";
 import { Table as TableIcon } from "lucide-react";
+import React from "react";
 import { TableData, VisualizationConfig } from "../../../../clients/types";
 
 interface TableProps {
@@ -23,7 +23,9 @@ export const Table: React.FC<TableProps> = ({ data }) => {
             <TableIcon className="w-8 h-8 text-gray-400" />
           </div>
           <div className="space-y-2">
-            <p className="text-lg font-semibold text-gray-700">No data available</p>
+            <p className="text-lg font-semibold text-gray-700">
+              No data available
+            </p>
             <p className="text-base text-gray-500">Unable to display table</p>
           </div>
         </div>

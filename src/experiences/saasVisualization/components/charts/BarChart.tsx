@@ -1,5 +1,5 @@
-import React from "react";
 import { BarChart3 } from "lucide-react";
+import React from "react";
 import { BarChartData, VisualizationConfig } from "../../../../clients/types";
 
 interface BarChartProps {
@@ -23,8 +23,12 @@ export const BarChart: React.FC<BarChartProps> = ({ data }) => {
             <BarChart3 className="w-8 h-8 text-gray-400" />
           </div>
           <div className="space-y-2">
-            <p className="text-lg font-semibold text-gray-700">No data available</p>
-            <p className="text-base text-gray-500">Unable to display bar chart</p>
+            <p className="text-lg font-semibold text-gray-700">
+              No data available
+            </p>
+            <p className="text-base text-gray-500">
+              Unable to display bar chart
+            </p>
           </div>
         </div>
       </div>

@@ -11,7 +11,12 @@ export const ChartSkeleton: React.FC<ChartSkeletonProps> = ({ type }) => {
         return (
           <div className="chart-skeleton flex items-center justify-center">
             <div className="relative">
-              <svg width="280" height="280" viewBox="0 0 200 200" className="drop-shadow-sm">
+              <svg
+                width="280"
+                height="280"
+                viewBox="0 0 200 200"
+                className="drop-shadow-sm"
+              >
                 {/* Pie chart skeleton - animated circles */}
                 <circle
                   cx="100"
@@ -65,9 +70,30 @@ export const ChartSkeleton: React.FC<ChartSkeletonProps> = ({ type }) => {
                 />
               ))}
               {/* Grid lines */}
-              <line x1="40" y1="300" x2="560" y2="300" stroke="#f3f4f6" strokeWidth="1" />
-              <line x1="40" y1="240" x2="560" y2="240" stroke="#f3f4f6" strokeWidth="1" />
-              <line x1="40" y1="180" x2="560" y2="180" stroke="#f3f4f6" strokeWidth="1" />
+              <line
+                x1="40"
+                y1="300"
+                x2="560"
+                y2="300"
+                stroke="#f3f4f6"
+                strokeWidth="1"
+              />
+              <line
+                x1="40"
+                y1="240"
+                x2="560"
+                y2="240"
+                stroke="#f3f4f6"
+                strokeWidth="1"
+              />
+              <line
+                x1="40"
+                y1="180"
+                x2="560"
+                y2="180"
+                stroke="#f3f4f6"
+                strokeWidth="1"
+              />
             </svg>
           </div>
         );
@@ -94,10 +120,38 @@ export const ChartSkeleton: React.FC<ChartSkeletonProps> = ({ type }) => {
                 />
               ))}
               {/* Grid lines */}
-              <line x1="40" y1="300" x2="460" y2="300" stroke="#f3f4f6" strokeWidth="1" />
-              <line x1="40" y1="240" x2="460" y2="240" stroke="#f3f4f6" strokeWidth="1" />
-              <line x1="40" y1="180" x2="460" y2="180" stroke="#f3f4f6" strokeWidth="1" />
-              <line x1="40" y1="120" x2="460" y2="120" stroke="#f3f4f6" strokeWidth="1" />
+              <line
+                x1="40"
+                y1="300"
+                x2="460"
+                y2="300"
+                stroke="#f3f4f6"
+                strokeWidth="1"
+              />
+              <line
+                x1="40"
+                y1="240"
+                x2="460"
+                y2="240"
+                stroke="#f3f4f6"
+                strokeWidth="1"
+              />
+              <line
+                x1="40"
+                y1="180"
+                x2="460"
+                y2="180"
+                stroke="#f3f4f6"
+                strokeWidth="1"
+              />
+              <line
+                x1="40"
+                y1="120"
+                x2="460"
+                y2="120"
+                stroke="#f3f4f6"
+                strokeWidth="1"
+              />
             </svg>
           </div>
         );
@@ -110,16 +164,25 @@ export const ChartSkeleton: React.FC<ChartSkeletonProps> = ({ type }) => {
               <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
                 <div className="flex space-x-6">
                   {Array.from({ length: 4 }, (_, i) => (
-                    <div key={i} className="h-4 bg-gray-300 rounded animate-pulse flex-1"></div>
+                    <div
+                      key={i}
+                      className="h-4 bg-gray-300 rounded animate-pulse flex-1"
+                    ></div>
                   ))}
                 </div>
               </div>
               {/* Table rows skeleton */}
               {Array.from({ length: 6 }, (_, i) => (
-                <div key={i} className="px-6 py-4 border-b border-gray-100 last:border-b-0">
+                <div
+                  key={i}
+                  className="px-6 py-4 border-b border-gray-100 last:border-b-0"
+                >
                   <div className="flex space-x-6">
                     {Array.from({ length: 4 }, (_, j) => (
-                      <div key={j} className="h-4 bg-gray-200 rounded animate-pulse flex-1"></div>
+                      <div
+                        key={j}
+                        className="h-4 bg-gray-200 rounded animate-pulse flex-1"
+                      ></div>
                     ))}
                   </div>
                 </div>
@@ -140,18 +203,24 @@ export const ChartSkeleton: React.FC<ChartSkeletonProps> = ({ type }) => {
   return (
     <div className="chart-loading-container h-full flex flex-col items-center justify-center space-y-8 p-8">
       {/* Chart skeleton */}
-      <div className="flex-shrink-0">
-        {renderChartSkeleton()}
-      </div>
+      <div className="flex-shrink-0">{renderChartSkeleton()}</div>
 
       {/* Loading indicator */}
       <div className="text-center space-y-3">
         <div className="flex justify-center space-x-2">
           <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
-          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
-          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+          <div
+            className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"
+            style={{ animationDelay: "0.1s" }}
+          ></div>
+          <div
+            className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"
+            style={{ animationDelay: "0.2s" }}
+          ></div>
         </div>
-        <p className="text-base text-gray-600 font-medium">Preparing visualization...</p>
+        <p className="text-base text-gray-600 font-medium">
+          Preparing visualization...
+        </p>
       </div>
     </div>
   );

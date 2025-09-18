@@ -6,8 +6,6 @@ import { ISaaSVisualizationClient } from "./interfaces";
 import { VISUALIZATION_PROMPT } from "./prompts";
 import {
   SaaSCompany,
-  VisualizationConfig,
-  VisualizationData,
   VisualizationRequest,
   VisualizationResponse,
   VisualizationUpdate,
@@ -19,17 +17,10 @@ const DATA_STORAGE_KEY = "saas_companies_data";
 // Type for structured OpenAI response
 interface StructuredCallbackResponse {
   methodology: string;
-  rationale: string;
-  function: string;
+  visualizationConcept: string;
+  dataFunction: string;
+  svgFunction: string;
   error?: string;
-}
-
-// Type for the result returned by the generated function
-interface VisualizationFunctionResult {
-  type: "pie" | "scatter" | "table" | "bar" | "line";
-  title: string;
-  data: Record<string, unknown>;
-  config?: Record<string, unknown>;
 }
 
 // Import the CSV data
@@ -254,91 +245,41 @@ Please analyze the user's request above and generate the appropriate JavaScript 
           // Return a response with error information
           return {
             id: this.generateId(),
-            type: "table",
             title: "Visualization Request Error",
-            data: {
-              headers: ["Error"],
-              rows: [[structuredResponse.error]],
-            },
-            config: {},
             methodology: structuredResponse.methodology,
-            rationale: structuredResponse.rationale,
+            visualizationConcept: structuredResponse.visualizationConcept,
             error: structuredResponse.error,
             createdAt: new Date().toISOString(),
           };
         }
 
-        // Extract the function code from the function field
-        const functionCode = structuredResponse.function;
-        if (!functionCode || typeof functionCode !== "string") {
+        // Extract the function code from the response
+        const dataFunction = structuredResponse.dataFunction;
+        const svgFunction = structuredResponse.svgFunction;
+
+        if (!dataFunction || typeof dataFunction !== "string") {
           throw new Error(
-            "Invalid response: missing or invalid function field"
+            "Invalid response: missing or invalid dataFunction field"
           );
         }
 
-        console.log("Function code received:", functionCode); // Debug log
-
-        // Parse the function string and create an executable function
-        // Handle both function declarations and expressions
-        let processingFunction: (
-          companies: SaaSCompany[]
-        ) => Record<string, unknown>;
-
-        try {
-          // Try to create function from the raw code
-          processingFunction = new Function(
-            "companies",
-            `return (${functionCode})(companies);`
-          )();
-        } catch (funcError) {
-          console.warn(
-            "Direct function creation failed, trying alternative approach:",
-            funcError
-          );
-
-          // Alternative: wrap in an immediately invoked function expression
-          const wrappedCode = `
-            (function() {
-              const userFunction = ${functionCode};
-              return function(companies) {
-                return userFunction(companies);
-              };
-            })()
-          `;
-
-          processingFunction = eval(wrappedCode);
-        }
-
-        // Execute the function with the data
-        const result = processingFunction(
-          request.data
-        ) as unknown as VisualizationFunctionResult;
-        console.log("Function execution result:", result); // Debug log
-
-        // Validate the result structure
-        if (!result || typeof result !== "object") {
-          throw new Error("Function did not return a valid object");
-        }
-
-        if (!result.type || !result.title || !result.data) {
+        if (!svgFunction || typeof svgFunction !== "string") {
           throw new Error(
-            "Function result missing required fields: type, title, or data"
+            "Invalid response: missing or invalid svgFunction field"
           );
         }
 
-        // Convert to our visualization response format
-        const visualizationResult =
-          result as unknown as VisualizationFunctionResult;
+        console.log("Data function received:", dataFunction); // Debug log
+        console.log("SVG function received:", svgFunction); // Debug log
+
+        // Return the AI-generated functions directly
         return {
           id: this.generateId(),
-          type: visualizationResult.type,
-          title: visualizationResult.title,
-          data: visualizationResult.data as unknown as VisualizationData,
-          config:
-            (visualizationResult.config as unknown as VisualizationConfig) ||
-            {},
+          title: "AI-Generated Visualization", // AI will determine the actual title
           methodology: structuredResponse.methodology,
-          rationale: structuredResponse.rationale,
+          visualizationConcept: structuredResponse.visualizationConcept,
+          dataFunction: dataFunction,
+          svgFunction: svgFunction,
           createdAt: new Date().toISOString(),
         };
       } catch (parseError) {
@@ -363,8 +304,9 @@ Please analyze the user's request above and generate the appropriate JavaScript 
   ): StructuredCallbackResponse {
     const lines = response.split("\n");
     let methodology = "";
-    let rationale = "";
-    let functionCode = "";
+    let visualizationConcept = "";
+    let dataFunction = "";
+    let svgFunction = "";
     let error = "";
 
     let currentSection = "";
@@ -373,12 +315,15 @@ Please analyze the user's request above and generate the appropriate JavaScript 
       if (line.startsWith("METHODOLOGY:")) {
         currentSection = "methodology";
         methodology = line.substring("METHODOLOGY:".length).trim();
-      } else if (line.startsWith("VISUALIZATION RATIONALE:")) {
-        currentSection = "rationale";
-        rationale = line.substring("VISUALIZATION RATIONALE:".length).trim();
-      } else if (line.startsWith("FUNCTION:")) {
-        currentSection = "function";
-        functionCode = line.substring("FUNCTION:".length).trim();
+      } else if (line.startsWith("VISUALIZATION CONCEPT:")) {
+        currentSection = "visualizationConcept";
+        visualizationConcept = line.substring("VISUALIZATION CONCEPT:".length).trim();
+      } else if (line.startsWith("DATA_FUNCTION:")) {
+        currentSection = "dataFunction";
+        dataFunction = line.substring("DATA_FUNCTION:".length).trim();
+      } else if (line.startsWith("SVG_FUNCTION:")) {
+        currentSection = "svgFunction";
+        svgFunction = line.substring("SVG_FUNCTION:".length).trim();
       } else if (line.startsWith("ERROR:")) {
         currentSection = "error";
         error = line.substring("ERROR:".length).trim();
@@ -386,11 +331,14 @@ Please analyze the user's request above and generate the appropriate JavaScript 
         // Continue accumulating content for the current section
         if (currentSection === "methodology") {
           methodology += " " + line.trim();
-        } else if (currentSection === "rationale") {
-          rationale += " " + line.trim();
-        } else if (currentSection === "function") {
-          if (functionCode) functionCode += "\n" + line;
-          else functionCode = line;
+        } else if (currentSection === "visualizationConcept") {
+          visualizationConcept += " " + line.trim();
+        } else if (currentSection === "dataFunction") {
+          if (dataFunction) dataFunction += "\n" + line;
+          else dataFunction = line;
+        } else if (currentSection === "svgFunction") {
+          if (svgFunction) svgFunction += "\n" + line;
+          else svgFunction = line;
         } else if (currentSection === "error") {
           error += " " + line.trim();
         }
@@ -399,8 +347,9 @@ Please analyze the user's request above and generate the appropriate JavaScript 
 
     return {
       methodology: methodology.trim(),
-      rationale: rationale.trim(),
-      function: functionCode.trim(),
+      visualizationConcept: visualizationConcept.trim(),
+      dataFunction: dataFunction.trim(),
+      svgFunction: svgFunction.trim(),
       error: error.trim() || undefined,
     };
   }

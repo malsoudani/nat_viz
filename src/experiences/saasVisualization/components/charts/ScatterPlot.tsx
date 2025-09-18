@@ -1,5 +1,5 @@
-import React from "react";
 import { ScatterChart } from "lucide-react";
+import React from "react";
 import {
   ScatterPlotData,
   VisualizationConfig,
@@ -74,8 +74,12 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({ data }) => {
             <ScatterChart className="w-8 h-8 text-gray-400" />
           </div>
           <div className="space-y-2">
-            <p className="text-lg font-semibold text-gray-700">No data available</p>
-            <p className="text-base text-gray-500">Unable to display scatter plot</p>
+            <p className="text-lg font-semibold text-gray-700">
+              No data available
+            </p>
+            <p className="text-base text-gray-500">
+              Unable to display scatter plot
+            </p>
           </div>
         </div>
       </div>

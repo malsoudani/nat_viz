@@ -20,12 +20,14 @@ import {
   Table as TableIcon,
   TrendingUp,
 } from "lucide-react";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   BarChartData,
   PieChartData,
+  SaaSCompany,
   ScatterPlotData,
   TableData,
+  VisualizationResponse,
 } from "../../../clients/types";
 import { useSaaSVisualization } from "../SaaSVisualizationContext";
 import {
@@ -34,6 +36,7 @@ import {
   VisualizationIdle,
   VisualizationUpdated,
   VisualizationUpdating,
+  SaaSDataLoaded,
 } from "../state/SaaSVisualizationState";
 import { BarChart } from "./charts/BarChart";
 import { ChartSkeleton } from "./charts/ChartSkeletons";
@@ -41,10 +44,86 @@ import { PieChart } from "./charts/PieChart";
 import { ScatterPlot } from "./charts/ScatterPlot";
 import { Table } from "./charts/Table";
 
-export const VisualizationDisplay: React.FC = () => {
-  const { visualizationState } = useSaaSVisualization();
+interface SVGVisualizationRendererProps {
+  visualization: VisualizationResponse;
+  companies: SaaSCompany[];
+}
 
-  const getChartIcon = (type: string) => {
+const SVGVisualizationRenderer: React.FC<SVGVisualizationRendererProps> = ({
+  visualization,
+  companies,
+}) => {
+  const svgContent = useMemo(() => {
+    if (!visualization.dataFunction || !visualization.svgFunction) {
+      return null;
+    }
+
+    try {
+      // Execute the data processing function
+      let dataFunction: (companies: SaaSCompany[]) => unknown;
+      try {
+        // Try to create function directly
+        dataFunction = new Function("companies", `return (${visualization.dataFunction})(companies);`)();
+      } catch {
+        // Fallback: wrap in IIFE
+        const wrappedCode = `(function() { return ${visualization.dataFunction}; })()`;
+        dataFunction = eval(wrappedCode);
+      }
+      const processedData = dataFunction(companies);
+
+      // Execute the SVG generation function
+      let svgFunction: (processedData: unknown) => string;
+      try {
+        // Try to create function directly
+        svgFunction = new Function("processedData", `return (${visualization.svgFunction})(processedData);`)();
+      } catch {
+        // Fallback: wrap in IIFE
+        const wrappedCode = `(function() { return ${visualization.svgFunction}; })()`;
+        svgFunction = eval(wrappedCode);
+      }
+      const svgString = svgFunction(processedData);
+
+      return svgString;
+    } catch (error) {
+      console.error("Error executing AI-generated functions:", error);
+      return `<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+        <rect width="800" height="600" fill="#f8fafc" rx="16"/>
+        <text x="400" y="280" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" fill="#ef4444">
+          Error generating visualization
+        </text>
+        <text x="400" y="320" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#6b7280">
+          ${error instanceof Error ? error.message : "Unknown error"}
+        </text>
+      </svg>`;
+    }
+  }, [visualization.dataFunction, visualization.svgFunction, companies]);
+
+  if (!svgContent) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center space-y-4">
+          <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto" />
+          <p className="text-gray-600">Unable to generate visualization</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="w-full h-full flex items-center justify-center"
+      dangerouslySetInnerHTML={{ __html: svgContent }}
+    />
+  );
+};
+
+export const VisualizationDisplay: React.FC = () => {
+  const { visualizationState, saasDataState } = useSaaSVisualization();
+
+  // Get companies data from the loaded state
+  const companies = saasDataState instanceof SaaSDataLoaded ? saasDataState.data : [];
+
+  const getChartIcon = (type?: string) => {
     switch (type) {
       case "pie":
         return <PieChartIcon className="w-5 h-5" />;
@@ -183,7 +262,10 @@ export const VisualizationDisplay: React.FC = () => {
                       <Clock className="w-5 h-5 mr-2" />
                       {new Date(visualization.createdAt).toLocaleString()}
                     </span>
-                    <Badge variant="outline" className="capitalize px-3 py-1 text-sm font-medium">
+                    <Badge
+                      variant="outline"
+                      className="capitalize px-3 py-1 text-sm font-medium"
+                    >
                       {visualization.type} Chart
                     </Badge>
                   </CardDescription>
@@ -294,42 +376,55 @@ export const VisualizationDisplay: React.FC = () => {
                       {visualization.type} Visualization
                     </span>
                   </span>
-                  <Badge variant="outline" className="px-4 py-2 text-sm font-medium border-gray-300">
+                  <Badge
+                    variant="outline"
+                    className="px-4 py-2 text-sm font-medium border-gray-300"
+                  >
                     Interactive
                   </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-2">
                 <div className="h-[600px] bg-white rounded-xl border border-gray-200 overflow-hidden shadow-inner p-8">
-                  {visualization.type === "pie" && (
-                    <PieChart
-                      data={visualization.data as PieChartData}
-                      config={visualization.config}
+                  {visualization.svgFunction ? (
+                    <SVGVisualizationRenderer
+                      visualization={visualization}
+                      companies={companies}
                     />
-                  )}
-                  {visualization.type === "scatter" && (
-                    <ScatterPlot
-                      data={visualization.data as ScatterPlotData}
-                      config={visualization.config}
-                    />
-                  )}
-                  {visualization.type === "bar" && (
-                    <BarChart
-                      data={visualization.data as BarChartData}
-                      config={visualization.config}
-                    />
-                  )}
-                  {visualization.type === "table" && (
-                    <Table
-                      data={visualization.data as TableData}
-                      config={visualization.config}
-                    />
-                  )}
-                  {visualization.type === "line" && (
-                    <BarChart
-                      data={visualization.data as BarChartData}
-                      config={visualization.config}
-                    />
+                  ) : (
+                    // Legacy chart rendering for backward compatibility
+                    <>
+                      {visualization.type === "pie" && (
+                        <PieChart
+                          data={visualization.data as PieChartData}
+                          config={visualization.config || {}}
+                        />
+                      )}
+                      {visualization.type === "scatter" && (
+                        <ScatterPlot
+                          data={visualization.data as ScatterPlotData}
+                          config={visualization.config || {}}
+                        />
+                      )}
+                      {visualization.type === "bar" && (
+                        <BarChart
+                          data={visualization.data as BarChartData}
+                          config={visualization.config || {}}
+                        />
+                      )}
+                      {visualization.type === "table" && (
+                        <Table
+                          data={visualization.data as TableData}
+                          config={visualization.config || {}}
+                        />
+                      )}
+                      {visualization.type === "line" && (
+                        <BarChart
+                          data={visualization.data as BarChartData}
+                          config={visualization.config || {}}
+                        />
+                      )}
+                    </>
                   )}
                 </div>
               </CardContent>

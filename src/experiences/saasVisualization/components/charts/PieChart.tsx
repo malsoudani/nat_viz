@@ -1,5 +1,5 @@
-import React from "react";
 import { PieChart as PieChartIcon } from "lucide-react";
+import React from "react";
 import { PieChartData, VisualizationConfig } from "../../../../clients/types";
 
 interface PieChartProps {
@@ -23,8 +23,12 @@ export const PieChart: React.FC<PieChartProps> = ({ data }) => {
             <PieChartIcon className="w-8 h-8 text-gray-400" />
           </div>
           <div className="space-y-2">
-            <p className="text-lg font-semibold text-gray-700">No data available</p>
-            <p className="text-base text-gray-500">Unable to display pie chart</p>
+            <p className="text-lg font-semibold text-gray-700">
+              No data available
+            </p>
+            <p className="text-base text-gray-500">
+              Unable to display pie chart
+            </p>
           </div>
         </div>
       </div>

@@ -68,14 +68,18 @@ export interface VisualizationRequest {
 
 export interface VisualizationResponse {
   id: string;
-  type: "pie" | "scatter" | "table" | "bar" | "line";
   title: string;
-  data: VisualizationData;
-  config: VisualizationConfig;
   createdAt: string;
   methodology?: string; // How the AI analyzed the request
-  rationale?: string; // Why this visualization type was chosen
+  visualizationConcept?: string; // Creative visualization approach description
+  dataFunction?: string; // AI-generated JavaScript function to process data
+  svgFunction?: string; // AI-generated JavaScript function to create SVG
   error?: string; // Error message if request is incompatible
+  // Legacy fields for backward compatibility
+  type?: string;
+  data?: VisualizationData;
+  config?: VisualizationConfig;
+  rationale?: string; // Legacy field - replaced by visualizationConcept
 }
 
 export interface VisualizationUpdate {
