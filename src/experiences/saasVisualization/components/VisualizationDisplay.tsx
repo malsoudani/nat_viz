@@ -31,12 +31,12 @@ import {
 } from "../../../clients/types";
 import { useSaaSVisualization } from "../SaaSVisualizationContext";
 import {
+  SaaSDataLoaded,
   VisualizationCreated,
   VisualizationCreating,
   VisualizationIdle,
   VisualizationUpdated,
   VisualizationUpdating,
-  SaaSDataLoaded,
 } from "../state/SaaSVisualizationState";
 import { BarChart } from "./charts/BarChart";
 import { ChartSkeleton } from "./charts/ChartSkeletons";
@@ -63,7 +63,10 @@ const SVGVisualizationRenderer: React.FC<SVGVisualizationRendererProps> = ({
       let dataFunction: (companies: SaaSCompany[]) => unknown;
       try {
         // Try to create function directly
-        dataFunction = new Function("companies", `return (${visualization.dataFunction})(companies);`)();
+        dataFunction = new Function(
+          "companies",
+          `return (${visualization.dataFunction})(companies);`
+        )();
       } catch {
         // Fallback: wrap in IIFE
         const wrappedCode = `(function() { return ${visualization.dataFunction}; })()`;
@@ -75,7 +78,10 @@ const SVGVisualizationRenderer: React.FC<SVGVisualizationRendererProps> = ({
       let svgFunction: (processedData: unknown) => string;
       try {
         // Try to create function directly
-        svgFunction = new Function("processedData", `return (${visualization.svgFunction})(processedData);`)();
+        svgFunction = new Function(
+          "processedData",
+          `return (${visualization.svgFunction})(processedData);`
+        )();
       } catch {
         // Fallback: wrap in IIFE
         const wrappedCode = `(function() { return ${visualization.svgFunction}; })()`;
@@ -121,7 +127,8 @@ export const VisualizationDisplay: React.FC = () => {
   const { visualizationState, saasDataState } = useSaaSVisualization();
 
   // Get companies data from the loaded state
-  const companies = saasDataState instanceof SaaSDataLoaded ? saasDataState.data : [];
+  const companies =
+    saasDataState instanceof SaaSDataLoaded ? saasDataState.data : [];
 
   const getChartIcon = (type?: string) => {
     switch (type) {

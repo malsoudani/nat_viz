@@ -74,7 +74,8 @@ SVG GENERATION FUNCTION:
 10. For bar/line charts: Include value labels on bars/lines and clear axis markings
 11. For pie charts: Include percentage labels and a legend
 12. Ensure all visualizations are self-explanatory with proper data identification
-7. Pay attention to user requests for specific styling or features
+13. The SVG function must be completely self-sufficient and cannot rely on any external methods, dependencies, or functions provided outside of the function itself. It should only use standard JavaScript and SVG DOM methods.
+14. Pay attention to user requests for specific styling or features
 
 DESIGN PRINCIPLES:
 - Modern gradients and color schemes

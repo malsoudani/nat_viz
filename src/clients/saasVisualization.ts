@@ -317,7 +317,9 @@ Please analyze the user's request above and generate the appropriate JavaScript 
         methodology = line.substring("METHODOLOGY:".length).trim();
       } else if (line.startsWith("VISUALIZATION CONCEPT:")) {
         currentSection = "visualizationConcept";
-        visualizationConcept = line.substring("VISUALIZATION CONCEPT:".length).trim();
+        visualizationConcept = line
+          .substring("VISUALIZATION CONCEPT:".length)
+          .trim();
       } else if (line.startsWith("DATA_FUNCTION:")) {
         currentSection = "dataFunction";
         dataFunction = line.substring("DATA_FUNCTION:".length).trim();

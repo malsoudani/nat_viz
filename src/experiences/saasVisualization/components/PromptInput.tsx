@@ -47,7 +47,9 @@ export const PromptInput: React.FC<PromptInputProps> = ({
             className="block text-sm font-medium text-gray-700 mb-2"
           >
             Describe your visualization
-            <span className="text-xs text-gray-500 ml-2">(text will be preserved after creation)</span>
+            <span className="text-xs text-gray-500 ml-2">
+              (text will be preserved after creation)
+            </span>
           </label>
           <textarea
             id="prompt"
