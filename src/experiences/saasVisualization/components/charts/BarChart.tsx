@@ -1,4 +1,5 @@
 import React from "react";
+import { BarChart3 } from "lucide-react";
 import { BarChartData, VisualizationConfig } from "../../../../clients/types";
 
 interface BarChartProps {
@@ -16,13 +17,14 @@ export const BarChart: React.FC<BarChartProps> = ({ data }) => {
     !Array.isArray(data.datasets)
   ) {
     return (
-      <div className="bar-chart">
-        <div className="flex flex-row items-start justify-center gap-6 h-full min-h-0">
-          <div className="flex items-center justify-center flex-shrink-0">
-            <div className="text-center text-gray-500">
-              <p className="text-sm font-medium">No data available</p>
-              <p className="text-xs mt-1">Unable to display bar chart</p>
-            </div>
+      <div className="bar-chart h-full flex items-center justify-center">
+        <div className="text-center space-y-4 p-8">
+          <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto">
+            <BarChart3 className="w-8 h-8 text-gray-400" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-lg font-semibold text-gray-700">No data available</p>
+            <p className="text-base text-gray-500">Unable to display bar chart</p>
           </div>
         </div>
       </div>
