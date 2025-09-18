@@ -10,6 +10,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import {
   AlertTriangle,
+  ArrowRight,
   BarChart3,
   Brain,
   CheckCircle,
@@ -17,18 +18,13 @@ import {
   Loader2,
   PieChart as PieChartIcon,
   ScatterChart,
+  Sparkles,
   Table as TableIcon,
   TrendingUp,
+  Zap,
 } from "lucide-react";
 import React, { useMemo } from "react";
-import {
-  BarChartData,
-  PieChartData,
-  SaaSCompany,
-  ScatterPlotData,
-  TableData,
-  VisualizationResponse,
-} from "../../../clients/types";
+import { SaaSCompany, VisualizationResponse } from "../../../clients/types";
 import { useSaaSVisualization } from "../SaaSVisualizationContext";
 import {
   SaaSDataLoaded,
@@ -38,11 +34,6 @@ import {
   VisualizationUpdated,
   VisualizationUpdating,
 } from "../state/SaaSVisualizationState";
-import { BarChart } from "./charts/BarChart";
-import { ChartSkeleton } from "./charts/ChartSkeletons";
-import { PieChart } from "./charts/PieChart";
-import { ScatterPlot } from "./charts/ScatterPlot";
-import { Table } from "./charts/Table";
 
 interface SVGVisualizationRendererProps {
   visualization: VisualizationResponse;
@@ -53,6 +44,11 @@ const SVGVisualizationRenderer: React.FC<SVGVisualizationRendererProps> = ({
   visualization,
   companies,
 }) => {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const [isHovering, setIsHovering] = React.useState(false);
+  const [hoverData, setHoverData] = React.useState<unknown>(null);
+  const [mousePosition, setMousePosition] = React.useState({ x: 0, y: 0 });
+
   const svgContent = useMemo(() => {
     if (!visualization.dataFunction || !visualization.svgFunction) {
       return null;
@@ -104,6 +100,72 @@ const SVGVisualizationRenderer: React.FC<SVGVisualizationRendererProps> = ({
     }
   }, [visualization.dataFunction, visualization.svgFunction, companies]);
 
+  // Execute hover callback when hover state changes
+  React.useEffect(() => {
+    if (!visualization.hoverCallback || !canvasRef.current) return;
+
+    try {
+      let hoverFunction: (data: unknown) => void;
+      try {
+        // Try to create function directly
+        hoverFunction = new Function(
+          "hoverData",
+          `return (${visualization.hoverCallback})(hoverData);`
+        )();
+      } catch {
+        // Fallback: wrap in IIFE
+        const wrappedCode = `(function() { return ${visualization.hoverCallback}; })()`;
+        hoverFunction = eval(wrappedCode);
+      }
+
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d");
+      if (!context) return;
+
+      const callbackData = {
+        data: hoverData,
+        position: mousePosition,
+        canvas,
+        context,
+        showTooltip: isHovering,
+      };
+
+      hoverFunction(callbackData);
+    } catch (error) {
+      console.error("Error executing hover callback:", error);
+    }
+  }, [visualization.hoverCallback, isHovering, hoverData, mousePosition]);
+
+  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    setMousePosition({ x, y });
+
+    // Try to get data from the hovered element
+    const target = event.target as SVGElement;
+    if (target && target.hasAttribute("data-hover")) {
+      try {
+        const data = JSON.parse(target.getAttribute("data-hover") || "{}");
+        setHoverData(data);
+      } catch (error) {
+        console.error("Error parsing hover data:", error);
+        setHoverData(null);
+      }
+    } else {
+      setHoverData(null);
+    }
+  };
+
+  const handleMouseEnter = () => {
+    setIsHovering(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovering(false);
+    setHoverData(null);
+  };
+
   if (!svgContent) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -116,10 +178,25 @@ const SVGVisualizationRenderer: React.FC<SVGVisualizationRendererProps> = ({
   }
 
   return (
-    <div
-      className="w-full h-full flex items-center justify-center"
-      dangerouslySetInnerHTML={{ __html: svgContent }}
-    />
+    <div className="w-full h-full flex items-center justify-center relative">
+      <div
+        className="w-full h-full flex items-center justify-center"
+        onMouseMove={handleMouseMove}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        dangerouslySetInnerHTML={{ __html: svgContent }}
+      />
+      <canvas
+        ref={canvasRef}
+        className="absolute pointer-events-none"
+        style={{
+          display: isHovering ? "block" : "none",
+          left: mousePosition.x + 10,
+          top: mousePosition.y - 10,
+          zIndex: 10,
+        }}
+      />
+    </div>
   );
 };
 
@@ -148,30 +225,63 @@ export const VisualizationDisplay: React.FC = () => {
   if (visualizationState instanceof VisualizationIdle) {
     return (
       <div className="min-h-[600px] flex items-center justify-center p-12">
-        <Card className="w-full max-w-3xl shadow-xl border-0 bg-gradient-to-br from-white to-gray-50">
+        <Card className="w-full max-w-4xl shadow-2xl border-0 bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 backdrop-blur-sm">
           <CardHeader className="text-center pb-8">
-            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mb-6 shadow-lg">
+            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mb-6 shadow-xl">
               <TrendingUp className="w-10 h-10 text-indigo-600" />
             </div>
-            <CardTitle className="text-3xl font-bold text-gray-900 mb-4">
-              Ready to Visualize
+            <CardTitle className="text-4xl font-bold text-gray-900 mb-4">
+              Your Canvas Awaits
             </CardTitle>
-            <CardDescription className="text-gray-600 text-xl leading-relaxed px-4">
-              Enter a prompt above to create your first data visualization
-              powered by AI
+            <CardDescription className="text-gray-600 text-xl leading-relaxed px-4 max-w-2xl mx-auto">
+              Transform complex SaaS data into beautiful, interactive
+              visualizations. Just describe what you want to see, and AI will
+              create it for you.
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
-            <div className="flex justify-center space-x-3">
-              <div className="w-3 h-3 bg-indigo-400 rounded-full animate-pulse"></div>
-              <div
-                className="w-3 h-3 bg-indigo-400 rounded-full animate-pulse"
-                style={{ animationDelay: "0.2s" }}
-              ></div>
-              <div
-                className="w-3 h-3 bg-indigo-400 rounded-full animate-pulse"
-                style={{ animationDelay: "0.4s" }}
-              ></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <BarChart3 className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  Multiple Chart Types
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Bar charts, scatter plots, pie charts, and more
+                </p>
+              </div>
+              <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200">
+                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Brain className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">AI-Powered</h3>
+                <p className="text-sm text-gray-600">
+                  Natural language processing creates perfect visualizations
+                </p>
+              </div>
+              <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border border-purple-200">
+                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Zap className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  Interactive
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Hover for rich tooltips and detailed insights
+                </p>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full">
+                <Sparkles className="w-5 h-5 text-blue-600 mr-3" />
+                <span className="text-blue-800 font-medium">
+                  Start by entering a prompt in the panel on the left
+                </span>
+                <ArrowRight className="w-5 h-5 text-blue-600 ml-3" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -185,54 +295,94 @@ export const VisualizationDisplay: React.FC = () => {
   ) {
     return (
       <div className="min-h-[600px] flex flex-col space-y-8 px-6 py-8">
-        <Card className="shadow-lg border-0 bg-gradient-to-r from-indigo-50 to-purple-50">
+        <Card className="shadow-2xl border-0 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50">
           <CardHeader className="pb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-6">
-                <Avatar className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg">
+                <Avatar className="w-16 h-16 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-600 shadow-xl">
                   <AvatarFallback className="bg-transparent">
-                    <Loader2 className="w-7 h-7 text-white animate-spin" />
+                    <Loader2 className="w-8 h-8 text-white animate-spin" />
                   </AvatarFallback>
                 </Avatar>
-                <div className="space-y-1">
-                  <CardTitle className="text-2xl font-bold text-gray-900">
+                <div className="space-y-2">
+                  <CardTitle className="text-3xl font-bold text-gray-900">
                     {visualizationState instanceof VisualizationCreating
-                      ? "Creating Visualization..."
+                      ? "Creating Your Visualization..."
                       : "Updating Visualization..."}
                   </CardTitle>
                   <CardDescription className="text-indigo-700 text-lg">
-                    AI is processing your request and generating insights
+                    AI is analyzing your data and crafting the perfect
+                    visualization
                   </CardDescription>
                 </div>
               </div>
               <Badge
                 variant="secondary"
-                className="bg-indigo-100 text-indigo-700 px-4 py-2 text-sm font-medium"
+                className="bg-indigo-100 text-indigo-700 px-6 py-3 text-sm font-medium shadow-sm"
               >
                 Processing
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="pt-2">
-            <Progress value={75} className="w-full h-3 mb-4" />
-            <p className="text-base text-gray-600 font-medium">
-              Analyzing data patterns and generating visualization...
-            </p>
+            <Progress value={75} className="w-full h-4 mb-6 shadow-sm" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center p-6 bg-white/60 rounded-xl border border-indigo-200">
+                <Brain className="w-8 h-8 text-indigo-600 mx-auto mb-3" />
+                <h4 className="font-semibold text-gray-900 mb-2">
+                  Analyzing Data
+                </h4>
+                <p className="text-sm text-gray-600">
+                  Processing 100+ SaaS companies
+                </p>
+              </div>
+              <div className="text-center p-6 bg-white/60 rounded-xl border border-purple-200">
+                <Sparkles className="w-8 h-8 text-purple-600 mx-auto mb-3" />
+                <h4 className="font-semibold text-gray-900 mb-2">
+                  Generating SVG
+                </h4>
+                <p className="text-sm text-gray-600">
+                  Creating interactive elements
+                </p>
+              </div>
+              <div className="text-center p-6 bg-white/60 rounded-xl border border-pink-200">
+                <Zap className="w-8 h-8 text-pink-600 mx-auto mb-3" />
+                <h4 className="font-semibold text-gray-900 mb-2">
+                  Adding Interactivity
+                </h4>
+                <p className="text-sm text-gray-600">
+                  Implementing hover tooltips
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg border-0">
+        <Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50">
           <CardContent className="p-12">
             <div className="h-[500px] flex items-center justify-center">
-              <div className="text-center space-y-6">
-                <ChartSkeleton type="pie" />
-                <div className="space-y-2">
-                  <p className="text-xl text-gray-700 font-medium animate-pulse">
-                    Generating visualization...
+              <div className="text-center space-y-8">
+                <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                  <Loader2 className="w-8 h-8 text-white animate-spin" />
+                </div>
+                <div className="space-y-3">
+                  <p className="text-2xl text-gray-700 font-bold animate-pulse">
+                    Crafting your visualization...
                   </p>
-                  <p className="text-gray-500 text-base">
-                    This may take a few moments
+                  <p className="text-gray-500 text-lg">
+                    This usually takes 10-15 seconds
                   </p>
+                  <div className="flex justify-center space-x-2">
+                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
+                    <div
+                      className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.1s" }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-pink-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.2s" }}
+                    ></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -393,46 +543,10 @@ export const VisualizationDisplay: React.FC = () => {
               </CardHeader>
               <CardContent className="pt-2">
                 <div className="h-[600px] bg-white rounded-xl border border-gray-200 overflow-hidden shadow-inner p-8">
-                  {visualization.svgFunction ? (
-                    <SVGVisualizationRenderer
-                      visualization={visualization}
-                      companies={companies}
-                    />
-                  ) : (
-                    // Legacy chart rendering for backward compatibility
-                    <>
-                      {visualization.type === "pie" && (
-                        <PieChart
-                          data={visualization.data as PieChartData}
-                          config={visualization.config || {}}
-                        />
-                      )}
-                      {visualization.type === "scatter" && (
-                        <ScatterPlot
-                          data={visualization.data as ScatterPlotData}
-                          config={visualization.config || {}}
-                        />
-                      )}
-                      {visualization.type === "bar" && (
-                        <BarChart
-                          data={visualization.data as BarChartData}
-                          config={visualization.config || {}}
-                        />
-                      )}
-                      {visualization.type === "table" && (
-                        <Table
-                          data={visualization.data as TableData}
-                          config={visualization.config || {}}
-                        />
-                      )}
-                      {visualization.type === "line" && (
-                        <BarChart
-                          data={visualization.data as BarChartData}
-                          config={visualization.config || {}}
-                        />
-                      )}
-                    </>
-                  )}
+                  <SVGVisualizationRenderer
+                    visualization={visualization}
+                    companies={companies}
+                  />
                 </div>
               </CardContent>
             </Card>

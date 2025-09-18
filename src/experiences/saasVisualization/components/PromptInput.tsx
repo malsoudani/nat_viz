@@ -1,3 +1,13 @@
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { CheckCircle, Sparkles, Wand2 } from "lucide-react";
 import React, { useState } from "react";
 import { useSaaSVisualization } from "../SaaSVisualizationContext";
 import { CreateVisualizationRequested } from "../state/SaaSVisualizationEvent";
@@ -37,82 +47,135 @@ export const PromptInput: React.FC<PromptInputProps> = ({
   const isDisabled = isLoading || !(saasDataState instanceof SaaSDataLoaded);
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold mb-4">Create Visualization</h2>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label
-            htmlFor="prompt"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            Describe your visualization
-            <span className="text-xs text-gray-500 ml-2">
-              (text will be preserved after creation)
-            </span>
-          </label>
-          <textarea
-            id="prompt"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="e.g., Create a pie chart showing the distribution of SaaS companies by industry"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-            rows={4}
-            disabled={isDisabled}
-          />
+    <Card className="shadow-2xl border-0 bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 backdrop-blur-sm">
+      <CardHeader className="pb-6">
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+            <Wand2 className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <CardTitle className="text-2xl font-bold text-gray-900">
+              Create Visualization
+            </CardTitle>
+            <CardDescription className="text-gray-600 mt-1">
+              Describe what you want to visualize in natural language
+            </CardDescription>
+          </div>
         </div>
+      </CardHeader>
 
-        <button
-          type="submit"
-          disabled={isDisabled || !prompt.trim()}
-          className={`w-full py-2 px-4 rounded-md font-medium transition-colors ${
-            isDisabled || !prompt.trim()
-              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-              : "bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          }`}
-        >
-          {isLoading ? (
-            <span className="flex items-center justify-center">
-              <svg
-                className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
+      <CardContent className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="prompt"
+                className="block text-sm font-semibold text-gray-900"
               >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Creating...
-            </span>
-          ) : (
-            "Create Visualization"
-          )}
-          {!isLoading && prompt.trim() && (
-            <span className="text-xs text-gray-500 mt-1 block">
-              Your prompt will remain in the input box for easy editing
-            </span>
-          )}
-        </button>
-      </form>
+                Your Prompt
+              </label>
+              <Badge
+                variant="secondary"
+                className="bg-blue-100 text-blue-800 hover:bg-blue-100"
+              >
+                <Sparkles className="w-3 h-3 mr-1" />
+                AI-Powered
+              </Badge>
+            </div>
 
-      {!(saasDataState instanceof SaaSDataLoaded) && (
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-          <p className="text-sm text-yellow-800">
-            Loading SaaS data... Please wait before creating visualizations.
-          </p>
-        </div>
-      )}
-    </div>
+            <div className="relative">
+              <textarea
+                id="prompt"
+                value={prompt}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                  setPrompt(e.target.value)
+                }
+                placeholder="e.g., Create a bubble chart showing company valuation vs employee count, colored by industry..."
+                className="w-full min-h-[120px] px-4 py-3 border-2 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 bg-white/80 backdrop-blur-sm text-base leading-relaxed shadow-sm rounded-lg resize-none focus:outline-none"
+                disabled={isDisabled}
+              />
+
+              {prompt.trim() && (
+                <div className="absolute -top-2 -right-2">
+                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100 shadow-sm">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Ready
+                  </Badge>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500">{prompt.length} characters</span>
+              <span className="text-gray-500 flex items-center">
+                <Sparkles className="w-3 h-3 mr-1" />
+                AI will generate interactive SVG
+              </span>
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            disabled={isDisabled || !prompt.trim()}
+            className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+          >
+            {isLoading ? (
+              <div className="flex items-center justify-center space-x-3">
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span>Creating Visualization...</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center space-x-3">
+                <Wand2 className="w-5 h-5" />
+                <span>Create Visualization</span>
+              </div>
+            )}
+          </Button>
+
+          {!isLoading && prompt.trim() && (
+            <p className="text-xs text-gray-500 text-center">
+              Your prompt will remain in the input box for easy editing
+            </p>
+          )}
+        </form>
+
+        {/* Status Messages */}
+        {!(saasDataState instanceof SaaSDataLoaded) && (
+          <div className="p-4 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse"></div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-amber-800">
+                  Loading SaaS Data...
+                </p>
+                <p className="text-xs text-amber-600 mt-1">
+                  Please wait while we prepare the dataset
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {prompt.trim() && saasDataState instanceof SaaSDataLoaded && (
+          <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-green-800">
+                  Ready to Create!
+                </p>
+                <p className="text-xs text-green-600 mt-1">
+                  Your prompt will remain in the input box for easy editing
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };

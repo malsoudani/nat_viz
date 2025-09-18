@@ -6,7 +6,7 @@ import { SaaSVisualizationContainer } from "./experiences/saasVisualization/comp
 function App() {
   return (
     <SaaSVisualizationProvider saasClient={clients.saasVisualization}>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
         <SaaSVisualizationContainer />
       </div>
     </SaaSVisualizationProvider>

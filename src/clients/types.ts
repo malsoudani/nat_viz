@@ -15,41 +15,6 @@ export interface SaaSCompany {
   description?: string; // Optional description derived from product
 }
 
-export interface PieChartData {
-  labels: string[];
-  values: number[];
-  colors?: string[];
-}
-
-export interface ScatterPlotData {
-  points: Array<{
-    x: number;
-    y: number;
-    label: string;
-    metadata?: Record<string, unknown>;
-  }>;
-}
-
-export interface TableData {
-  headers: string[];
-  rows: Array<Array<string | number>>;
-}
-
-export interface BarChartData {
-  labels: string[];
-  datasets: Array<{
-    label: string;
-    data: number[];
-    backgroundColor?: string[];
-  }>;
-}
-
-export type VisualizationData =
-  | PieChartData
-  | ScatterPlotData
-  | TableData
-  | BarChartData;
-
 export interface VisualizationConfig {
   colors?: string[];
   title?: string;
@@ -74,13 +39,25 @@ export interface VisualizationResponse {
   visualizationConcept?: string; // Creative visualization approach description
   dataFunction?: string; // AI-generated JavaScript function to process data
   svgFunction?: string; // AI-generated JavaScript function to create SVG
+  hoverCallback?: string; // AI-generated JavaScript function for hover interactions
   error?: string; // Error message if request is incompatible
   // Legacy fields for backward compatibility
   type?: string;
-  data?: VisualizationData;
+  data?: unknown; // Generic data for legacy compatibility
   config?: VisualizationConfig;
   rationale?: string; // Legacy field - replaced by visualizationConcept
 }
+
+// Hover callback types for canvas tooltips
+export interface HoverCallbackData {
+  data: unknown; // The data point being hovered
+  position: { x: number; y: number }; // Mouse position
+  canvas: HTMLCanvasElement; // Canvas element for drawing
+  context: CanvasRenderingContext2D; // Canvas 2D context
+  showTooltip: boolean; // Whether to show the tooltip
+}
+
+export type HoverCallback = (data: HoverCallbackData) => void;
 
 export interface VisualizationUpdate {
   id: string;

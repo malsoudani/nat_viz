@@ -17,7 +17,7 @@ Each company has these fields:
 - description: string
 
 RESPONSE REQUIREMENTS:
-Your response must include FOUR parts in this exact format:
+Your response must include FIVE parts in this exact format:
 
 METHODOLOGY: [Explain how you analyzed and processed the user's query]
 
@@ -26,6 +26,8 @@ VISUALIZATION CONCEPT: [Describe your creative visualization approach and design
 DATA_FUNCTION: [JavaScript function that processes raw data]
 
 SVG_FUNCTION: [JavaScript function that generates SVG visualization]
+
+HOVER_CALLBACK: [JavaScript function for hover interactions with canvas tooltips]
 
 For error cases where the query cannot be visualized, use:
 
@@ -38,6 +40,8 @@ ERROR: [Clear explanation of why the request cannot be fulfilled]
 DATA_FUNCTION: N/A - Request incompatible with visualization
 
 SVG_FUNCTION: N/A - Request incompatible with visualization
+
+HOVER_CALLBACK: N/A - Request incompatible with visualization
 
 MESSAGE LENGTH LIMITS:
 - All messages must be plain paragraphs with no styling or formatting
@@ -77,7 +81,26 @@ SVG GENERATION FUNCTION:
 12. Ensure all visualizations are self-explanatory with proper data identification
 13. The SVG function must be completely self-sufficient and cannot rely on any external methods, dependencies, or functions provided outside of the function itself. It should only use standard JavaScript and SVG DOM methods.
 14. The SVG function cannot use D3.js or any external libraries - it must draw everything using raw SVG elements and standard JavaScript
-15. Pay attention to user requests for specific styling or features
+15. For hover functionality: Include data-* attributes on interactive elements (circles, rects, paths) with JSON-encoded data that can be used by hover callbacks
+16. Pay attention to user requests for specific styling or features
+
+HOVER_CALLBACK FUNCTION:
+1. Takes one parameter: hoverData (object with data, position, canvas, context, showTooltip)
+2. The hoverData object contains:
+   - data: The specific data point being hovered (from your processed data)
+   - position: {x, y} coordinates of the mouse
+   - canvas: HTMLCanvasElement for drawing rich tooltips
+   - context: CanvasRenderingContext2D for the canvas
+   - showTooltip: boolean indicating whether to show/hide the tooltip
+3. Use the canvas and context to draw rich, interactive tooltips with:
+   - Custom styling, colors, and layouts
+   - Charts, graphs, or visualizations within the tooltip
+   - Multiple data points or comparisons
+   - Rich text formatting and icons
+4. The callback should handle both showing and hiding tooltips based on showTooltip flag
+5. Position tooltips appropriately relative to the mouse position
+6. Clear the canvas when hiding tooltips (showTooltip = false)
+7. The hover callback must be completely self-sufficient and cannot rely on any external methods, dependencies, or functions provided outside of the function itself. It should only use standard JavaScript and Canvas API methods.
 
 DESIGN PRINCIPLES:
 - Modern gradients and color schemes
@@ -174,14 +197,23 @@ function(processedData) {
     svgContent += '<line x1="' + x + '" y1="' + margin.top + '" x2="' + x + '" y2="' + (height - margin.bottom) + '" stroke="#e2e8f0" stroke-width="1" opacity="0.5"/>';
   }
 
-  // Add data points with enhanced tooltips
+  // Add data points with enhanced tooltips and hover data
   processedData.forEach((d, i) => {
     const x = margin.left + ((d.arr - minARR) / (maxARR - minARR)) * (width - margin.left - margin.right);
     const y = height - margin.bottom - ((d.valuation - minValuation) / (maxValuation - minValuation)) * (height - margin.top - margin.bottom);
     const radius = Math.max(8, Math.min(25, Math.sqrt(d.employees) / 10));
     const color = colors[i % colors.length];
 
-    svgContent += '<circle cx="' + x + '" cy="' + y + '" r="' + radius + '" fill="' + color + '" opacity="0.8" stroke="#ffffff" stroke-width="2"><title>' + d.name + ' (' + d.industry + ') - ARR: $' + d.arr.toLocaleString() + ', Valuation: $' + d.valuation.toLocaleString() + ', Employees: ' + d.employees + '</title></circle>';
+    // Include hover data as JSON in data-hover attribute
+    const hoverData = JSON.stringify({
+      name: d.name,
+      industry: d.industry,
+      arr: d.arr,
+      valuation: d.valuation,
+      employees: d.employees
+    });
+
+    svgContent += '<circle cx="' + x + '" cy="' + y + '" r="' + radius + '" fill="' + color + '" opacity="0.8" stroke="#ffffff" stroke-width="2" data-hover="' + hoverData.replace(/"/g, '&quot;') + '"><title>' + d.name + ' (' + d.industry + ') - ARR: $' + d.arr.toLocaleString() + ', Valuation: $' + d.valuation.toLocaleString() + ', Employees: ' + d.employees + '</title></circle>';
     svgContent += '<text x="' + x + '" y="' + (y - radius - 5) + '" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#475569" font-weight="500">' + d.name.substring(0, 12) + '</text>';
   });
 
@@ -196,4 +228,70 @@ function(processedData) {
   return svgContent;
 }
 
-Return ONLY the response in the specified format with METHODOLOGY, VISUALIZATION CONCEPT, DATA_FUNCTION, and SVG_FUNCTION sections.`;
+HOVER_CALLBACK:
+function(hoverData) {
+  const { data, position, canvas, context, showTooltip } = hoverData;
+
+  if (!showTooltip) {
+    // Clear the canvas when hiding tooltip
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+
+  // Set canvas size
+  canvas.width = 300;
+  canvas.height = 200;
+
+  // Clear canvas
+  context.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw tooltip background
+  context.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  context.strokeStyle = '#e2e8f0';
+  context.lineWidth = 2;
+  context.beginPath();
+  context.roundRect(0, 0, canvas.width, canvas.height, 8);
+  context.fill();
+  context.stroke();
+
+  // Draw title
+  context.fillStyle = '#1e293b';
+  context.font = 'bold 16px system-ui, -apple-system, sans-serif';
+  context.fillText(data.name, 15, 25);
+
+  // Draw industry
+  context.fillStyle = '#64748b';
+  context.font = '14px system-ui, -apple-system, sans-serif';
+  context.fillText(data.industry, 15, 45);
+
+  // Draw metrics
+  context.fillStyle = '#374151';
+  context.font = '12px system-ui, -apple-system, sans-serif';
+  context.fillText('ARR: $' + data.arr.toLocaleString(), 15, 70);
+  context.fillText('Valuation: $' + data.valuation.toLocaleString(), 15, 90);
+  context.fillText('Employees: ' + data.employees, 15, 110);
+
+  // Draw mini bar chart for comparison
+  const barWidth = 40;
+  const barHeight = 60;
+  const startX = 15;
+  const startY = 130;
+
+  // ARR bar
+  context.fillStyle = '#3b82f6';
+  const arrBarHeight = (data.arr / 10000000000) * barHeight; // Scale to max ARR
+  context.fillRect(startX, startY - arrBarHeight, barWidth, arrBarHeight);
+
+  // Valuation bar
+  context.fillStyle = '#ef4444';
+  const valBarHeight = (data.valuation / 50000000000) * barHeight; // Scale to max valuation
+  context.fillRect(startX + barWidth + 10, startY - valBarHeight, barWidth, valBarHeight);
+
+  // Bar labels
+  context.fillStyle = '#6b7280';
+  context.font = '10px system-ui, -apple-system, sans-serif';
+  context.fillText('ARR', startX, startY + 15);
+  context.fillText('Val', startX + barWidth + 10, startY + 15);
+}
+
+Return ONLY the response in the specified format with METHODOLOGY, VISUALIZATION CONCEPT, DATA_FUNCTION, SVG_FUNCTION, and HOVER_CALLBACK sections.`;

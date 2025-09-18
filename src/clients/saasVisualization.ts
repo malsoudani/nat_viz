@@ -20,6 +20,7 @@ interface StructuredCallbackResponse {
   visualizationConcept: string;
   dataFunction: string;
   svgFunction: string;
+  hoverCallback: string;
   error?: string;
 }
 
@@ -256,6 +257,7 @@ Please analyze the user's request above and generate the appropriate JavaScript 
         // Extract the function code from the response
         const dataFunction = structuredResponse.dataFunction;
         const svgFunction = structuredResponse.svgFunction;
+        const hoverCallback = structuredResponse.hoverCallback;
 
         if (!dataFunction || typeof dataFunction !== "string") {
           throw new Error(
@@ -271,6 +273,7 @@ Please analyze the user's request above and generate the appropriate JavaScript 
 
         console.log("Data function received:", dataFunction); // Debug log
         console.log("SVG function received:", svgFunction); // Debug log
+        console.log("Hover callback received:", hoverCallback); // Debug log
 
         // Return the AI-generated functions directly
         return {
@@ -280,6 +283,7 @@ Please analyze the user's request above and generate the appropriate JavaScript 
           visualizationConcept: structuredResponse.visualizationConcept,
           dataFunction: dataFunction,
           svgFunction: svgFunction,
+          hoverCallback: hoverCallback,
           createdAt: new Date().toISOString(),
         };
       } catch (parseError) {
@@ -307,6 +311,7 @@ Please analyze the user's request above and generate the appropriate JavaScript 
     let visualizationConcept = "";
     let dataFunction = "";
     let svgFunction = "";
+    let hoverCallback = "";
     let error = "";
 
     let currentSection = "";
@@ -326,6 +331,9 @@ Please analyze the user's request above and generate the appropriate JavaScript 
       } else if (line.startsWith("SVG_FUNCTION:")) {
         currentSection = "svgFunction";
         svgFunction = line.substring("SVG_FUNCTION:".length).trim();
+      } else if (line.startsWith("HOVER_CALLBACK:")) {
+        currentSection = "hoverCallback";
+        hoverCallback = line.substring("HOVER_CALLBACK:".length).trim();
       } else if (line.startsWith("ERROR:")) {
         currentSection = "error";
         error = line.substring("ERROR:".length).trim();
@@ -341,6 +349,9 @@ Please analyze the user's request above and generate the appropriate JavaScript 
         } else if (currentSection === "svgFunction") {
           if (svgFunction) svgFunction += "\n" + line;
           else svgFunction = line;
+        } else if (currentSection === "hoverCallback") {
+          if (hoverCallback) hoverCallback += "\n" + line;
+          else hoverCallback = line;
         } else if (currentSection === "error") {
           error += " " + line.trim();
         }
@@ -352,6 +363,7 @@ Please analyze the user's request above and generate the appropriate JavaScript 
       visualizationConcept: visualizationConcept.trim(),
       dataFunction: dataFunction.trim(),
       svgFunction: svgFunction.trim(),
+      hoverCallback: hoverCallback.trim(),
       error: error.trim() || undefined,
     };
   }

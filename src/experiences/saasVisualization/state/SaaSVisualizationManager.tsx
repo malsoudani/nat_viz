@@ -1,6 +1,6 @@
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { HttpError } from "../../../clients/httpClient";
 import { ISaaSVisualizationClient } from "../../../clients/interfaces";
 import { SaaSCompany, VisualizationResponse } from "../../../clients/types";
@@ -53,6 +53,14 @@ export const useSaaSVisualizationManager = (
     useState<VisualizationState>(new VisualizationIdle());
   const [visualizationsState, setVisualizationsState] =
     useState<SaaSVisualizationState>(new VisualizationsLoading());
+
+  // Use ref to track current saasDataState without causing re-renders
+  const saasDataStateRef = useRef<SaaSDataState>(saasDataState);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    saasDataStateRef.current = saasDataState;
+  }, [saasDataState]);
 
   const onError = useCallback((error: HttpError) => {
     console.error("SaaS Visualization Error:", error);
@@ -183,8 +191,12 @@ export const useSaaSVisualizationManager = (
         case CreateVisualizationRequested: {
           const createEvent = event as CreateVisualizationRequested;
           loadSaaSData().then(() => {
-            if (saasDataState instanceof SaaSDataLoaded) {
-              createVisualization(createEvent.prompt, saasDataState.data);
+            // Use ref to get current state without dependency issues
+            if (saasDataStateRef.current instanceof SaaSDataLoaded) {
+              createVisualization(
+                createEvent.prompt,
+                saasDataStateRef.current.data
+              );
             }
           });
           break;
@@ -209,7 +221,6 @@ export const useSaaSVisualizationManager = (
       createVisualization,
       updateVisualization,
       deleteVisualization,
-      saasDataState,
     ]
   );
 

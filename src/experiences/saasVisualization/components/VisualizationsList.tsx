@@ -1,9 +1,27 @@
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  BarChart3,
+  Clock,
+  Database,
+  Eye,
+  PieChart,
+  ScatterChart,
+  Sparkles,
+  Table,
+  Trash2,
+  TrendingUp,
+} from "lucide-react";
 import React from "react";
 import { useSaaSVisualization } from "../SaaSVisualizationContext";
-import {
-  DeleteVisualizationRequested,
-  UpdateVisualizationRequested,
-} from "../state/SaaSVisualizationEvent";
+import { DeleteVisualizationRequested } from "../state/SaaSVisualizationEvent";
 import { VisualizationsLoaded } from "../state/SaaSVisualizationState";
 
 export const VisualizationsList: React.FC = () => {
@@ -11,124 +29,194 @@ export const VisualizationsList: React.FC = () => {
 
   if (!(visualizationsState instanceof VisualizationsLoaded)) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Your Visualizations</h3>
-        <div className="text-center py-8">
-          <div className="animate-spin w-6 h-6 mx-auto mb-2 text-blue-600">
-            <svg fill="none" viewBox="0 0 24 24">
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
+      <Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50">
+        <CardHeader className="pb-6">
+          <CardTitle className="flex items-center text-xl font-bold text-gray-900">
+            <Database className="w-6 h-6 mr-3 text-blue-600" />
+            Your Visualizations
+          </CardTitle>
+          <CardDescription className="text-gray-600">
+            Loading your saved visualizations...
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-12">
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center mx-auto">
+              <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <p className="text-gray-500 text-lg">Loading visualizations...</p>
           </div>
-          <p className="text-sm text-gray-500">Loading visualizations...</p>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   const { visualizations } = visualizationsState;
 
+  const getChartIcon = (type?: string) => {
+    switch (type) {
+      case "pie":
+        return <PieChart className="w-5 h-5" />;
+      case "bar":
+        return <BarChart3 className="w-5 h-5" />;
+      case "scatter":
+        return <ScatterChart className="w-5 h-5" />;
+      case "table":
+        return <Table className="w-5 h-5" />;
+      default:
+        return <TrendingUp className="w-5 h-5" />;
+    }
+  };
+
+  const getChartColor = (type?: string) => {
+    switch (type) {
+      case "pie":
+        return "from-blue-500 to-blue-600";
+      case "bar":
+        return "from-green-500 to-green-600";
+      case "scatter":
+        return "from-purple-500 to-purple-600";
+      case "table":
+        return "from-orange-500 to-orange-600";
+      default:
+        return "from-gray-500 to-gray-600";
+    }
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">
-        Your Visualizations ({visualizations.length})
-      </h3>
-
-      {visualizations.length === 0 ? (
-        <div className="text-center py-8">
-          <div className="text-gray-400 mb-2">
-            <svg
-              className="w-12 h-12 mx-auto"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-            </svg>
+    <Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50">
+      <CardHeader className="pb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center text-2xl font-bold text-gray-900">
+              <Database className="w-6 h-6 mr-3 text-blue-600" />
+              Your Visualizations
+            </CardTitle>
+            <CardDescription className="text-gray-600 mt-1">
+              {visualizations.length} visualization
+              {visualizations.length !== 1 ? "s" : ""} created
+            </CardDescription>
           </div>
-          <p className="text-gray-500">No visualizations created yet</p>
+          <Badge
+            variant="secondary"
+            className="bg-blue-100 text-blue-800 hover:bg-blue-100 px-4 py-2"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            AI-Generated
+          </Badge>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {visualizations.map((visualization) => (
-            <div
-              key={visualization.id}
-              className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-900 mb-1">
-                    {visualization.title}
-                  </h4>
-                  <p className="text-sm text-gray-500 mb-2">
-                    Type: {visualization.type} • Created:{" "}
-                    {new Date(visualization.createdAt).toLocaleDateString()}
-                  </p>
-                  <div className="flex items-center space-x-2">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        visualization.type === "pie"
-                          ? "bg-blue-100 text-blue-800"
-                          : visualization.type === "scatter"
-                          ? "bg-green-100 text-green-800"
-                          : visualization.type === "bar"
-                          ? "bg-purple-100 text-purple-800"
-                          : visualization.type === "table"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {visualization.type}
-                    </span>
-                  </div>
-                </div>
+      </CardHeader>
 
-                <div className="flex items-center space-x-2 ml-4">
-                  <button
-                    onClick={() =>
-                      emitEvent(
-                        new UpdateVisualizationRequested(
-                          visualization.id,
-                          "Update this visualization"
-                        )
-                      )
-                    }
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                  >
-                    Update
-                  </button>
-                  <button
-                    onClick={() =>
-                      emitEvent(
-                        new DeleteVisualizationRequested(visualization.id)
-                      )
-                    }
-                    className="text-red-600 hover:text-red-800 text-sm font-medium"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
+      <CardContent>
+        {visualizations.length === 0 ? (
+          <div className="text-center py-16 px-8">
+            <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <TrendingUp className="w-8 h-8 text-gray-400" />
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">
+              No visualizations yet
+            </h3>
+            <p className="text-gray-500 text-lg mb-6 max-w-md mx-auto">
+              Create your first visualization by entering a prompt in the panel
+              above. AI will transform your ideas into beautiful, interactive
+              charts.
+            </p>
+            <div className="flex justify-center space-x-3">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+              <div
+                className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"
+                style={{ animationDelay: "0.2s" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"
+                style={{ animationDelay: "0.4s" }}
+              ></div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {visualizations.map((visualization) => (
+              <Card
+                key={visualization.id}
+                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-gradient-to-r from-white to-gray-50/50"
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-4 flex-1">
+                      <div
+                        className={`w-12 h-12 bg-gradient-to-br ${getChartColor(
+                          visualization.type
+                        )} rounded-xl flex items-center justify-center shadow-lg flex-shrink-0`}
+                      >
+                        <div className="text-white">
+                          {getChartIcon(visualization.type)}
+                        </div>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h4 className="font-bold text-gray-900 text-lg truncate">
+                            {visualization.title}
+                          </h4>
+                          <Badge
+                            variant="outline"
+                            className="capitalize text-xs font-medium border-gray-300 text-gray-700"
+                          >
+                            {visualization.type}
+                          </Badge>
+                        </div>
+
+                        <div className="flex items-center space-x-4 text-sm text-gray-500 mb-3">
+                          <div className="flex items-center">
+                            <Clock className="w-4 h-4 mr-1" />
+                            {new Date(
+                              visualization.createdAt
+                            ).toLocaleDateString()}
+                          </div>
+                          <Badge
+                            variant="secondary"
+                            className="bg-green-100 text-green-800 hover:bg-green-100 text-xs"
+                          >
+                            Ready
+                          </Badge>
+                        </div>
+
+                        <p className="text-gray-600 text-sm line-clamp-2">
+                          Interactive {visualization.type} chart created with AI
+                          assistance
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2 ml-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 transition-colors"
+                        onClick={() =>
+                          emitEvent(
+                            new DeleteVisualizationRequested(visualization.id)
+                          )
+                        }
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
