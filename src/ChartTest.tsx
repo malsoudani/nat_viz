@@ -48,25 +48,38 @@ export const ChartTest: React.FC = () => {
   return (
     <div className="p-8 space-y-8">
       <h1 className="text-2xl font-bold">Chart Components Test</h1>
+            <p className="text-gray-600">Hover over chart elements to see native SVG tooltips. Data summaries are shown horizontally alongside each chart.</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <h2 className="text-lg font-semibold mb-4">Pie Chart</h2>
+          <p className="text-sm text-gray-500 mb-2">
+            Hover over pie slices for details
+          </p>
           <PieChart data={testPieData} config={testConfig} />
         </div>
 
         <div>
           <h2 className="text-lg font-semibold mb-4">Scatter Plot</h2>
+          <p className="text-sm text-gray-500 mb-2">
+            Hover over data points for coordinates
+          </p>
           <ScatterPlot data={testScatterData} config={testConfig} />
         </div>
 
         <div>
           <h2 className="text-lg font-semibold mb-4">Bar Chart</h2>
+          <p className="text-sm text-gray-500 mb-2">
+            Hover over bars for values
+          </p>
           <BarChart data={testBarData} config={testConfig} />
         </div>
 
         <div>
           <h2 className="text-lg font-semibold mb-4">Table</h2>
+          <p className="text-sm text-gray-500 mb-2">
+            Data table (no tooltips needed)
+          </p>
           <Table data={testTableData} config={testConfig} />
         </div>
       </div>

@@ -40,140 +40,167 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({ data }) => {
 
   return (
     <div className="scatter-plot">
-      <div className="h-full flex items-center justify-center">
-        <svg
-          width={width}
-          height={height}
-          className="border border-gray-200 rounded-lg bg-white"
-        >
-          {/* Background */}
-          <rect width={width} height={height} fill="#f9fafb" />
+      <div className="flex flex-row items-start justify-center gap-6 h-full min-h-0">
+        {/* SVG Scatter Plot */}
+        <div className="flex items-center justify-center flex-shrink-0">
+          <svg
+            width={width}
+            height={height}
+            className="border border-gray-200 rounded-lg bg-white"
+          >
+            {/* Background */}
+            <rect width={width} height={height} fill="#f9fafb" />
 
-          {/* Plot area */}
-          <g transform={`translate(${margin.left},${margin.top})`}>
-            {/* Grid lines */}
-            <defs>
-              <pattern
-                id="grid"
-                width="20"
-                height="20"
-                patternUnits="userSpaceOnUse"
-              >
-                <path
-                  d="M 20 0 L 0 0 0 20"
-                  fill="none"
-                  stroke="#e5e7eb"
-                  strokeWidth="0.5"
-                />
-              </pattern>
-            </defs>
-            <rect width={innerWidth} height={innerHeight} fill="url(#grid)" />
+            {/* Plot area */}
+            <g transform={`translate(${margin.left},${margin.top})`}>
+              {/* Grid lines */}
+              <defs>
+                <pattern
+                  id="grid"
+                  width="20"
+                  height="20"
+                  patternUnits="userSpaceOnUse"
+                >
+                  <path
+                    d="M 20 0 L 0 0 0 20"
+                    fill="none"
+                    stroke="#e5e7eb"
+                    strokeWidth="0.5"
+                  />
+                </pattern>
+              </defs>
+              <rect width={innerWidth} height={innerHeight} fill="url(#grid)" />
 
-            {/* Data points */}
-            {points.map((point, index) => (
-              <circle
-                key={index}
-                cx={scaleX(point.x)}
-                cy={scaleY(point.y)}
-                r="4"
-                fill="#3B82F6"
-                stroke="#1e40af"
+              {/* Data points */}
+              {points.map((point, index) => (
+                <g key={index}>
+                  <circle
+                    cx={scaleX(point.x)}
+                    cy={scaleY(point.y)}
+                    r="4"
+                    fill="#3B82F6"
+                    stroke="#1e40af"
+                    strokeWidth="1"
+                    className="hover:r-6 transition-all cursor-pointer"
+                    opacity="0.8"
+                  />
+                  <title>{`${point.label}: (${point.x.toFixed(2)}, ${point.y.toFixed(2)})`}</title>
+                </g>
+              ))}
+
+              {/* Axes */}
+              <line
+                x1="0"
+                y1={innerHeight}
+                x2={innerWidth}
+                y2={innerHeight}
+                stroke="#6b7280"
                 strokeWidth="1"
-                className="hover:r-6 transition-all cursor-pointer"
-                opacity="0.8"
               />
+              <line
+                x1="0"
+                y1="0"
+                x2="0"
+                y2={innerHeight}
+                stroke="#6b7280"
+                strokeWidth="1"
+              />
+
+              {/* Axis labels */}
+              <text
+                x={innerWidth / 2}
+                y={innerHeight + 30}
+                textAnchor="middle"
+                className="text-sm fill-gray-600"
+              >
+                X Axis
+              </text>
+              <text
+                x={-30}
+                y={innerHeight / 2}
+                textAnchor="middle"
+                transform={`rotate(-90, -30, ${innerHeight / 2})`}
+                className="text-sm fill-gray-600"
+              >
+                Y Axis
+              </text>
+
+              {/* Axis ticks and values */}
+              {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+                const x = ratio * innerWidth;
+                const y = innerHeight;
+                const xValue = xMin + ratio * (xMax - xMin);
+                return (
+                  <g key={`x-${ratio}`}>
+                    <line
+                      x1={x}
+                      y1={y - 5}
+                      x2={x}
+                      y2={y + 5}
+                      stroke="#6b7280"
+                      strokeWidth="1"
+                    />
+                    <text
+                      x={x}
+                      y={y + 20}
+                      textAnchor="middle"
+                      className="text-xs fill-gray-500"
+                    >
+                      {xValue.toFixed(1)}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+                const y = innerHeight - ratio * innerHeight;
+                const yValue = yMin + ratio * (yMax - yMin);
+                return (
+                  <g key={`y-${ratio}`}>
+                    <line
+                      x1="-5"
+                      y1={y}
+                      x2="5"
+                      y2={y}
+                      stroke="#6b7280"
+                      strokeWidth="1"
+                    />
+                    <text
+                      x={-15}
+                      y={y + 4}
+                      textAnchor="end"
+                      className="text-xs fill-gray-500"
+                    >
+                      {yValue.toFixed(1)}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          </svg>
+        </div>
+
+        {/* Data Summary */}
+        <div className="flex-1 max-w-xs">
+          <h4 className="text-sm font-medium text-gray-900 mb-3">Data Points</h4>
+          <div className="space-y-1 max-h-48 overflow-y-auto">
+            {points.map((point, index) => (
+              <div key={index} className="flex items-center justify-between py-1 px-2 bg-gray-50 rounded text-sm">
+                <span className="text-gray-700 truncate max-w-24">
+                  {point.label}
+                </span>
+                <span className="text-gray-900 font-mono text-xs">
+                  ({point.x.toFixed(1)}, {point.y.toFixed(1)})
+                </span>
+              </div>
             ))}
-
-            {/* Axes */}
-            <line
-              x1="0"
-              y1={innerHeight}
-              x2={innerWidth}
-              y2={innerHeight}
-              stroke="#6b7280"
-              strokeWidth="1"
-            />
-            <line
-              x1="0"
-              y1="0"
-              x2="0"
-              y2={innerHeight}
-              stroke="#6b7280"
-              strokeWidth="1"
-            />
-
-            {/* Axis labels */}
-            <text
-              x={innerWidth / 2}
-              y={innerHeight + 30}
-              textAnchor="middle"
-              className="text-sm fill-gray-600"
-            >
-              X Axis
-            </text>
-            <text
-              x={-30}
-              y={innerHeight / 2}
-              textAnchor="middle"
-              transform={`rotate(-90, -30, ${innerHeight / 2})`}
-              className="text-sm fill-gray-600"
-            >
-              Y Axis
-            </text>
-
-            {/* Axis ticks and values */}
-            {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-              const x = ratio * innerWidth;
-              const y = innerHeight;
-              const xValue = xMin + ratio * (xMax - xMin);
-              return (
-                <g key={`x-${ratio}`}>
-                  <line
-                    x1={x}
-                    y1={y - 5}
-                    x2={x}
-                    y2={y + 5}
-                    stroke="#6b7280"
-                    strokeWidth="1"
-                  />
-                  <text
-                    x={x}
-                    y={y + 20}
-                    textAnchor="middle"
-                    className="text-xs fill-gray-500"
-                  >
-                    {xValue.toFixed(1)}
-                  </text>
-                </g>
-              );
-            })}
-
-            {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-              const y = innerHeight - ratio * innerHeight;
-              const yValue = yMin + ratio * (yMax - yMin);
-              return (
-                <g key={`y-${ratio}`}>
-                  <line
-                    x1="-5"
-                    y1={y}
-                    x2="5"
-                    y2={y}
-                    stroke="#6b7280"
-                    strokeWidth="1"
-                  />
-                  <text
-                    x={-15}
-                    y={y + 4}
-                    textAnchor="end"
-                    className="text-xs fill-gray-500"
-                  >
-                    {yValue.toFixed(1)}
-                  </text>
-                </g>
-              );
-            })}
-          </g>
-        </svg>
+          </div>
+          <div className="mt-3 pt-2 border-t border-gray-200">
+            <div className="text-sm text-gray-600">
+              Total points: <span className="font-medium text-gray-900">{points.length}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

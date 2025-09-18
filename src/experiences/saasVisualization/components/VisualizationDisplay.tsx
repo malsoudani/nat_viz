@@ -17,6 +17,7 @@ import { BarChart } from "./charts/BarChart";
 import { PieChart } from "./charts/PieChart";
 import { ScatterPlot } from "./charts/ScatterPlot";
 import { Table } from "./charts/Table";
+import { ChartSkeleton } from "./charts/ChartSkeletons";
 
 export const VisualizationDisplay: React.FC = () => {
   const { visualizationState } = useSaaSVisualization();
@@ -51,30 +52,20 @@ export const VisualizationDisplay: React.FC = () => {
     visualizationState instanceof VisualizationUpdating
   ) {
     return (
-      <div className="bg-white rounded-lg shadow p-8">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 mx-auto mb-4 text-blue-600">
-            <svg fill="none" viewBox="0 0 24 24">
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-          </div>
-          <p className="text-gray-600">
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="mb-4">
+          <h3 className="text-xl font-semibold text-gray-900">
             {visualizationState instanceof VisualizationCreating
-              ? "Creating visualization..."
-              : "Updating visualization..."}
+              ? "Creating Visualization..."
+              : "Updating Visualization..."}
+          </h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Processing your request with AI
           </p>
+        </div>
+
+        <div className="h-96 flex items-center justify-center">
+          <ChartSkeleton type="pie" />
         </div>
       </div>
     );
@@ -87,7 +78,7 @@ export const VisualizationDisplay: React.FC = () => {
     const visualization = visualizationState.visualization;
 
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-6 fade-in">
         <div className="mb-4">
           <h3 className="text-xl font-semibold text-gray-900">
             {visualization.title}

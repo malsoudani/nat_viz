@@ -67,9 +67,9 @@ export const PieChart: React.FC<PieChartProps> = ({ data }) => {
 
   return (
     <div className="pie-chart">
-      <div className="flex flex-col lg:flex-row items-center justify-center h-full">
+      <div className="flex flex-row items-start justify-center gap-6 h-full min-h-0">
         {/* SVG Pie Chart */}
-        <div className="flex-1 flex items-center justify-center mb-4 lg:mb-0 lg:mr-8">
+        <div className="flex items-center justify-center flex-shrink-0">
           <svg
             width="220"
             height="220"
@@ -77,14 +77,16 @@ export const PieChart: React.FC<PieChartProps> = ({ data }) => {
             className="drop-shadow-sm"
           >
             {pieSlices.map((slice, index) => (
-              <path
-                key={index}
-                d={slice.pathData}
-                fill={slice.color}
-                stroke="white"
-                strokeWidth="2"
-                className="hover:opacity-80 transition-opacity cursor-pointer"
-              />
+              <g key={index}>
+                <path
+                  d={slice.pathData}
+                  fill={slice.color}
+                  stroke="white"
+                  strokeWidth="2"
+                  className="hover:opacity-80 transition-opacity cursor-pointer"
+                />
+                <title>{`${slice.label}: ${slice.value} (${slice.percentage}%)`}</title>
+              </g>
             ))}
             {/* Center circle for better visual */}
             <circle
@@ -98,19 +100,22 @@ export const PieChart: React.FC<PieChartProps> = ({ data }) => {
           </svg>
         </div>
 
-        {/* Legend */}
-        <div className="flex-1 max-w-md">
-          <div className="space-y-2">
+        {/* Data Summary */}
+        <div className="flex-1 min-w-0 max-w-xs overflow-hidden">
+          <h4 className="text-sm font-medium text-gray-900 mb-3">Chart Data</h4>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
             {pieSlices.map((slice, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <div className="flex items-center">
+              <div key={index} className="flex items-center justify-between py-1">
+                <div className="flex items-center min-w-0 flex-1">
                   <div
-                    className="w-4 h-4 rounded mr-3 flex-shrink-0"
+                    className="w-3 h-3 rounded mr-2 flex-shrink-0"
                     style={{ backgroundColor: slice.color }}
                   />
-                  <span className="text-sm text-gray-700">{slice.label}</span>
+                  <span className="text-sm text-gray-700 truncate">
+                    {slice.label}
+                  </span>
                 </div>
-                <div className="text-right">
+                <div className="text-right flex-shrink-0 ml-2">
                   <span className="text-sm font-medium text-gray-900">
                     {slice.value}
                   </span>
@@ -120,6 +125,12 @@ export const PieChart: React.FC<PieChartProps> = ({ data }) => {
                 </div>
               </div>
             ))}
+          </div>
+          <div className="mt-3 pt-2 border-t border-gray-200">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Total:</span>
+              <span className="font-medium text-gray-900">{total}</span>
+            </div>
           </div>
         </div>
       </div>
