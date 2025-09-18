@@ -21,6 +21,93 @@ This guide outlines the architecture pattern for building "experiences" in our R
 - Implementations can be swapped (API, mock, etc.)
 - Business logic is separated from data access
 
+## Client Architecture
+
+The client architecture provides the foundational service layer that experiences build upon. It consists of three key files that work together to provide type-safe, functional API interactions.
+
+### 1. types.ts - Data Type Definitions
+**Role**: Central repository for all data types and entities used throughout the application.
+
+**Contents**:
+- Entity interfaces (User, Team, etc.)
+- Enum definitions with their mappings
+- Response data structures
+- Type definitions for complex objects
+
+**Example**:
+```typescript
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  createdAt: string;
+}
+
+export enum TeamType {
+  DEPARTMENT = "DEPARTMENT",
+  TEAM = "TEAM",
+  // ...
+}
+
+export const TeamTypeArabicMapping: Record<TeamType, string> = {
+  [TeamType.DEPARTMENT]: "قسم",
+  [TeamType.TEAM]: "فريق",
+  // ...
+};
+```
+
+### 2. interfaces.ts - Service Contracts & Data Interfaces
+**Role**: Defines the contracts for API services and data structures for request/response payloads.
+
+**Contents**:
+- Client interfaces (IExperienceClient) that specify service method signatures
+- Data interfaces for API request/response objects
+- Uses TaskEither for functional error handling
+
+**Example**:
+```typescript
+export interface IExperienceClient {
+  getList(params?: ListParams): TaskEither<HttpError, ListData>;
+  create(data: CreateData): TaskEither<HttpError, CreatedData>;
+  // ...
+}
+
+export interface CreateData {
+  name: string;
+  type: ExperienceType;
+  // ...
+}
+```
+
+### 3. config.ts - Client Configuration & Instantiation
+**Role**: Central configuration hub that sets up and provides all service clients to the application.
+
+**Contents**:
+- API URL configuration from environment variables
+- HttpClient instantiation
+- Client class instantiation and export through `clients` object
+
+**Example**:
+```typescript
+export const API_URL = import.meta.env.VITE_API_URL;
+
+const httpClient = new HttpClient(API_URL);
+
+export const clients = {
+  experience: new ExperienceClient(httpClient),
+  auth: new AuthenticationClient(httpClient),
+  // ...
+};
+```
+
+### Client Architecture Flow
+1. **types.ts** defines the data models
+2. **interfaces.ts** defines how services interact with those data models
+3. **config.ts** creates concrete implementations and makes them available
+4. Experiences import clients from config and use them in their state managers
+
+**Usage in Experiences**: State managers receive client instances through props and use them to perform business logic operations.
+
 ## Architecture Components
 
 ### State Management Pattern
@@ -265,6 +352,12 @@ export const ExperienceForm = () => {
 
 ```
 src/
+  clients/
+    config.ts (client configuration and instantiation)
+    interfaces.ts (service contracts and data interfaces)
+    types.ts (data type definitions)
+    httpClient.ts (HTTP client implementation)
+    experience.ts (implement ExperienceClient)
   experiences/
     experience-name/
       components/
@@ -278,11 +371,8 @@ src/
         ExperienceContext.tsx
       mock/
         mockData.ts
-  clients/
-    interfaces.ts (add IExperienceClient)
-    experience.ts (implement ExperienceClient)
-    types.ts (add experience types)
 ```
+
 
 ## Key Patterns to Remember
 
