@@ -60,6 +60,7 @@ DATA PROCESSING FUNCTION:
 3. Handle edge cases and missing data gracefully
 4. Filter out invalid or NaN values
 5. Transform data into optimal format for your visualization concept
+6. The data processing function must be completely self-sufficient and cannot rely on any external methods, dependencies, or functions provided outside of the function itself. It should only use standard JavaScript methods.
 
 SVG GENERATION FUNCTION:
 1. Takes one parameter: processedData (result from your data processing function)
