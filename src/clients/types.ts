@@ -73,6 +73,9 @@ export interface VisualizationResponse {
   data: VisualizationData;
   config: VisualizationConfig;
   createdAt: string;
+  methodology?: string; // How the AI analyzed the request
+  rationale?: string; // Why this visualization type was chosen
+  error?: string; // Error message if request is incompatible
 }
 
 export interface VisualizationUpdate {

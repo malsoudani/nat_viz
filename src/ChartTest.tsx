@@ -48,7 +48,10 @@ export const ChartTest: React.FC = () => {
   return (
     <div className="p-8 space-y-8">
       <h1 className="text-2xl font-bold">Chart Components Test</h1>
-            <p className="text-gray-600">Hover over chart elements to see native SVG tooltips. Data summaries are shown horizontally alongside each chart.</p>
+      <p className="text-gray-600">
+        Hover over chart elements to see native SVG tooltips. Data summaries are
+        shown horizontally alongside each chart.
+      </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>

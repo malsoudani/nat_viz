@@ -4,21 +4,135 @@ import {
   VisualizationConfig,
 } from "../../../../clients/types";
 
+interface ScatterPoint {
+  x: number;
+  y: number;
+  label: string;
+  metadata?: Record<string, unknown>;
+}
+
+interface NestedScatterData {
+  points: ScatterPoint[];
+}
+
+interface FlexibleScatterData {
+  points?: ScatterPoint[];
+  data?: ScatterPoint[] | NestedScatterData;
+  [key: string]: unknown;
+}
+
 interface ScatterPlotProps {
-  data: ScatterPlotData;
+  data: ScatterPlotData | FlexibleScatterData | ScatterPoint[];
   config: VisualizationConfig;
 }
 
 export const ScatterPlot: React.FC<ScatterPlotProps> = ({ data }) => {
-  const { points } = data;
+  // Debug logging to see what data we're receiving
+  console.log("ScatterPlot received data:", data);
 
-  // Calculate bounds for scaling
-  const xValues = points.map((p) => p.x);
-  const yValues = points.map((p) => p.y);
+  // Handle different possible data structures
+  let points: ScatterPoint[] = [];
+
+  if (Array.isArray(data)) {
+    // Alternative structure: direct array
+    points = data as ScatterPoint[];
+  } else if (
+    data &&
+    typeof data === "object" &&
+    "points" in data &&
+    Array.isArray((data as ScatterPlotData).points)
+  ) {
+    // Standard structure: { points: [...] }
+    points = (data as ScatterPlotData).points;
+  } else if (data && typeof data === "object" && "data" in data) {
+    const flexibleData = data as FlexibleScatterData;
+    if (Array.isArray(flexibleData.data)) {
+      // Nested structure: { data: [...] }
+      points = flexibleData.data;
+    } else if (
+      flexibleData.data &&
+      typeof flexibleData.data === "object" &&
+      "points" in flexibleData.data &&
+      Array.isArray((flexibleData.data as NestedScatterData).points)
+    ) {
+      // Nested structure: { data: { points: [...] } }
+      points = (flexibleData.data as NestedScatterData).points;
+    }
+  }
+
+  // Handle undefined or malformed data
+  if (!points || points.length === 0) {
+    console.log("ScatterPlot: No valid points found", {
+      dataExists: !!data,
+      pointsLength: points ? points.length : "undefined",
+    });
+    return (
+      <div className="scatter-plot">
+        <div className="flex flex-row items-start justify-center gap-6 h-full min-h-0">
+          <div className="flex items-center justify-center flex-shrink-0">
+            <div className="text-center text-gray-500">
+              <p className="text-sm font-medium">No data available</p>
+              <p className="text-xs mt-1">Unable to display scatter plot</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Filter out invalid points and handle NaN values
+  const validPoints = points.filter(
+    (point) =>
+      typeof point.x === "number" &&
+      !isNaN(point.x) &&
+      typeof point.y === "number" &&
+      !isNaN(point.y) &&
+      point.label
+  );
+
+  // If no valid points, show empty state
+  if (validPoints.length === 0) {
+    return (
+      <div className="scatter-plot">
+        <div className="flex flex-row items-start justify-center gap-6 h-full min-h-0">
+          <div className="flex items-center justify-center flex-shrink-0">
+            <div className="w-96 h-72 border border-gray-200 rounded-lg bg-white flex items-center justify-center">
+              <div className="text-center text-gray-500">
+                <div className="text-lg font-medium mb-2">No Valid Data</div>
+                <div className="text-sm">
+                  Unable to display scatter plot with current data
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 max-w-xs">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">
+              Data Points
+            </h4>
+            <div className="text-sm text-gray-500">
+              No valid data points available
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate bounds for scaling using only valid points
+  const xValues = validPoints.map((p) => p.x);
+  const yValues = validPoints.map((p) => p.y);
   const xMin = Math.min(...xValues);
   const xMax = Math.max(...xValues);
   const yMin = Math.min(...yValues);
   const yMax = Math.max(...yValues);
+
+  // Handle edge case where all values are the same
+  const xRange = xMax - xMin;
+  const yRange = yMax - yMin;
+  const effectiveXMin = xRange === 0 ? xMin - 1 : xMin;
+  const effectiveXMax = xRange === 0 ? xMax + 1 : xMax;
+  const effectiveYMin = yRange === 0 ? yMin - 1 : yMin;
+  const effectiveYMax = yRange === 0 ? yMax + 1 : yMax;
 
   // Chart dimensions
   const width = 400;
@@ -27,15 +141,22 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({ data }) => {
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
-  // Scale functions
+  // Scale functions with additional safety checks
   const scaleX = (x: number) => {
-    if (xMax === xMin) return innerWidth / 2;
-    return ((x - xMin) / (xMax - xMin)) * innerWidth;
+    if (!isFinite(x)) return 0;
+    if (effectiveXMax === effectiveXMin) return innerWidth / 2;
+    const scaled =
+      ((x - effectiveXMin) / (effectiveXMax - effectiveXMin)) * innerWidth;
+    return isFinite(scaled) ? scaled : 0;
   };
 
   const scaleY = (y: number) => {
-    if (yMax === yMin) return innerHeight / 2;
-    return innerHeight - ((y - yMin) / (yMax - yMin)) * innerHeight;
+    if (!isFinite(y)) return innerHeight / 2;
+    if (effectiveYMax === effectiveYMin) return innerHeight / 2;
+    const scaled =
+      innerHeight -
+      ((y - effectiveYMin) / (effectiveYMax - effectiveYMin)) * innerHeight;
+    return isFinite(scaled) ? scaled : innerHeight / 2;
   };
 
   return (
@@ -72,7 +193,7 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({ data }) => {
               <rect width={innerWidth} height={innerHeight} fill="url(#grid)" />
 
               {/* Data points */}
-              {points.map((point, index) => (
+              {validPoints.map((point, index) => (
                 <g key={index}>
                   <circle
                     cx={scaleX(point.x)}
@@ -84,7 +205,9 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({ data }) => {
                     className="hover:r-6 transition-all cursor-pointer"
                     opacity="0.8"
                   />
-                  <title>{`${point.label}: (${point.x.toFixed(2)}, ${point.y.toFixed(2)})`}</title>
+                  <title>{`${point.label}: (${point.x.toFixed(
+                    2
+                  )}, ${point.y.toFixed(2)})`}</title>
                 </g>
               ))}
 
@@ -129,7 +252,8 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({ data }) => {
               {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
                 const x = ratio * innerWidth;
                 const y = innerHeight;
-                const xValue = xMin + ratio * (xMax - xMin);
+                const xValue =
+                  effectiveXMin + ratio * (effectiveXMax - effectiveXMin);
                 return (
                   <g key={`x-${ratio}`}>
                     <line
@@ -146,7 +270,7 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({ data }) => {
                       textAnchor="middle"
                       className="text-xs fill-gray-500"
                     >
-                      {xValue.toFixed(1)}
+                      {isFinite(xValue) ? xValue.toFixed(1) : "N/A"}
                     </text>
                   </g>
                 );
@@ -154,7 +278,8 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({ data }) => {
 
               {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
                 const y = innerHeight - ratio * innerHeight;
-                const yValue = yMin + ratio * (yMax - yMin);
+                const yValue =
+                  effectiveYMin + ratio * (effectiveYMax - effectiveYMin);
                 return (
                   <g key={`y-${ratio}`}>
                     <line
@@ -171,7 +296,7 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({ data }) => {
                       textAnchor="end"
                       className="text-xs fill-gray-500"
                     >
-                      {yValue.toFixed(1)}
+                      {isFinite(yValue) ? yValue.toFixed(1) : "N/A"}
                     </text>
                   </g>
                 );
@@ -182,10 +307,15 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({ data }) => {
 
         {/* Data Summary */}
         <div className="flex-1 max-w-xs">
-          <h4 className="text-sm font-medium text-gray-900 mb-3">Data Points</h4>
+          <h4 className="text-sm font-medium text-gray-900 mb-3">
+            Data Points ({validPoints.length})
+          </h4>
           <div className="space-y-1 max-h-48 overflow-y-auto">
-            {points.map((point, index) => (
-              <div key={index} className="flex items-center justify-between py-1 px-2 bg-gray-50 rounded text-sm">
+            {validPoints.map((point, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between py-1 px-2 bg-gray-50 rounded text-sm"
+              >
                 <span className="text-gray-700 truncate max-w-24">
                   {point.label}
                 </span>
@@ -197,7 +327,15 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({ data }) => {
           </div>
           <div className="mt-3 pt-2 border-t border-gray-200">
             <div className="text-sm text-gray-600">
-              Total points: <span className="font-medium text-gray-900">{points.length}</span>
+              Total points:{" "}
+              <span className="font-medium text-gray-900">
+                {validPoints.length}
+              </span>
+              {validPoints.length !== points.length && (
+                <span className="text-red-500 ml-2">
+                  ({points.length - validPoints.length} invalid filtered out)
+                </span>
+              )}
             </div>
           </div>
         </div>

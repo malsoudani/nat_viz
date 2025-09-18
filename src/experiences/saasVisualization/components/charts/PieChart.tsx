@@ -7,6 +7,28 @@ interface PieChartProps {
 }
 
 export const PieChart: React.FC<PieChartProps> = ({ data }) => {
+  // Handle undefined or malformed data
+  if (
+    !data ||
+    !data.labels ||
+    !data.values ||
+    !Array.isArray(data.labels) ||
+    !Array.isArray(data.values)
+  ) {
+    return (
+      <div className="pie-chart">
+        <div className="flex flex-row items-start justify-center gap-6 h-full min-h-0">
+          <div className="flex items-center justify-center flex-shrink-0">
+            <div className="text-center text-gray-500">
+              <p className="text-sm font-medium">No data available</p>
+              <p className="text-xs mt-1">Unable to display pie chart</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const { labels, values, colors } = data;
   const total = values.reduce((sum, value) => sum + value, 0);
 
@@ -105,7 +127,10 @@ export const PieChart: React.FC<PieChartProps> = ({ data }) => {
           <h4 className="text-sm font-medium text-gray-900 mb-3">Chart Data</h4>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {pieSlices.map((slice, index) => (
-              <div key={index} className="flex items-center justify-between py-1">
+              <div
+                key={index}
+                className="flex items-center justify-between py-1"
+              >
                 <div className="flex items-center min-w-0 flex-1">
                   <div
                     className="w-3 h-3 rounded mr-2 flex-shrink-0"

@@ -7,6 +7,28 @@ interface BarChartProps {
 }
 
 export const BarChart: React.FC<BarChartProps> = ({ data }) => {
+  // Handle undefined or malformed data
+  if (
+    !data ||
+    !data.labels ||
+    !data.datasets ||
+    !Array.isArray(data.labels) ||
+    !Array.isArray(data.datasets)
+  ) {
+    return (
+      <div className="bar-chart">
+        <div className="flex flex-row items-start justify-center gap-6 h-full min-h-0">
+          <div className="flex items-center justify-center flex-shrink-0">
+            <div className="text-center text-gray-500">
+              <p className="text-sm font-medium">No data available</p>
+              <p className="text-xs mt-1">Unable to display bar chart</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const { labels, datasets } = data;
 
   // Calculate dimensions
@@ -173,11 +195,17 @@ export const BarChart: React.FC<BarChartProps> = ({ data }) => {
                 </div>
                 <div className="space-y-1">
                   {datasets.map((dataset, datasetIndex) => (
-                    <div key={datasetIndex} className="flex items-center justify-between text-sm">
+                    <div
+                      key={datasetIndex}
+                      className="flex items-center justify-between text-sm"
+                    >
                       <div className="flex items-center">
                         <div
                           className="w-2 h-2 rounded mr-2 flex-shrink-0"
-                          style={{ backgroundColor: barColors[datasetIndex % barColors.length] }}
+                          style={{
+                            backgroundColor:
+                              barColors[datasetIndex % barColors.length],
+                          }}
                         />
                         <span className="text-gray-600 text-xs">
                           {dataset.label}

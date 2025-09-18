@@ -3,14 +3,11 @@ import { TaskEither } from "fp-ts/TaskEither";
 import OpenAI from "openai";
 import { HttpError } from "./httpClient";
 import { ISaaSVisualizationClient } from "./interfaces";
+import { VISUALIZATION_PROMPT } from "./prompts";
 import {
-  PieChartData,
-  ScatterPlotData,
-  BarChartData,
-  TableData,
-  VisualizationData,
-  VisualizationConfig,
   SaaSCompany,
+  VisualizationConfig,
+  VisualizationData,
   VisualizationRequest,
   VisualizationResponse,
   VisualizationUpdate,
@@ -18,6 +15,22 @@ import {
 
 const STORAGE_KEY = "saas_visualizations";
 const DATA_STORAGE_KEY = "saas_companies_data";
+
+// Type for structured OpenAI response
+interface StructuredCallbackResponse {
+  methodology: string;
+  rationale: string;
+  function: string;
+  error?: string;
+}
+
+// Type for the result returned by the generated function
+interface VisualizationFunctionResult {
+  type: "pie" | "scatter" | "table" | "bar" | "line";
+  title: string;
+  data: Record<string, unknown>;
+  config?: Record<string, unknown>;
+}
 
 // Import the CSV data
 import csvData from "../../top_100_saas_companies_2025.csv?raw";
@@ -79,7 +92,9 @@ export class SaaSVisualizationClient implements ISaaSVisualizationClient {
   constructor() {
     const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
     if (!apiKey || apiKey === "your_openai_api_key_here") {
-      console.warn("OpenAI API key not set or using placeholder. Visualizations will fall back to basic processing.");
+      console.warn(
+        "OpenAI API key not set or using placeholder. Visualizations will fall back to basic processing."
+      );
     }
 
     this.openai = new OpenAI({
@@ -174,8 +189,10 @@ export class SaaSVisualizationClient implements ISaaSVisualizationClient {
     return TE.tryCatch(
       async () => {
         const completion = await this.openai.chat.completions.create({
-          model: "gpt-4",
-          messages: [{ role: "user", content: "Hello, can you respond with 'OK'?" }],
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "user", content: "Hello, can you respond with 'OK'?" },
+          ],
           max_tokens: 10,
         });
 
@@ -204,134 +221,19 @@ export class SaaSVisualizationClient implements ISaaSVisualizationClient {
   private async processVisualizationRequest(
     request: VisualizationRequest
   ): Promise<VisualizationResponse> {
-    const prompt = `
-You are a data visualization expert. Given the COMPLETE dataset of SaaS companies and the user's request, create an appropriate visualization.
-
-IMPORTANT: You have access to the ENTIRE dataset (${request.data.length} companies). Use ALL available data for your analysis and visualization.
-
-DATASET STRUCTURE:
-Each company has these exact fields:
-- id: string (unique identifier)
-- name: string (company name)
-- foundedYear: number (year founded)
-- hq: string (headquarters location)
-- industry: string (industry category)
-- totalFunding: string (funding with $ and M/B/T suffixes)
-- arr: string (annual recurring revenue with $ and M/B/T suffixes)
-- valuation: string (company valuation with $ and M/B/T suffixes)
-- employees: string (employee count, may contain commas)
-- topInvestors: string (investors, comma-separated)
-- product: string (main product/service)
-- g2Rating: number (G2 rating 0-5 scale)
-- description?: string (optional product description)
-
-FULL DATASET (${request.data.length} companies):
-${JSON.stringify(request.data, null, 2)}
-
-CRITICAL REQUIREMENTS:
-1. Process ALL ${request.data.length} companies - do not limit to samples
-2. Parse financial values correctly: $1.5M = 1,500,000; $2B = 2,000,000,000; $3T = 3,000,000,000,000
-3. Handle "N/A" values appropriately (exclude from calculations or set to 0)
-4. For employee counts, remove commas: "7,388" = 7388
+    // Include the user's specific request in the prompt
+    const fullPrompt = `${VISUALIZATION_PROMPT}
 
 USER REQUEST: "${request.prompt}"
 
-RESPONSE FORMAT REQUIREMENTS:
-Return a JSON object with EXACTLY these fields (no extra fields):
-
-For PIE CHART:
-{
-  "type": "pie",
-  "title": "Descriptive title for the pie chart",
-  "data": {
-    "labels": ["string array of category names"],
-    "values": [number array of values],
-    "colors": ["optional string array of hex colors"]
-  },
-  "config": {
-    "colors": ["same colors as data.colors"],
-    "showLegend": true,
-    "title": "Chart title"
-  }
-}
-
-For SCATTER PLOT:
-{
-  "type": "scatter",
-  "title": "Descriptive title for the scatter plot",
-  "data": {
-    "points": [
-      {
-        "x": number,
-        "y": number,
-        "label": "point label",
-        "metadata": {
-          "companyName": "string",
-          "industry": "string",
-          "additionalInfo": "any relevant data"
-        }
-      }
-    ]
-  },
-  "config": {
-    "xAxisLabel": "X axis description",
-    "yAxisLabel": "Y axis description",
-    "showGrid": true
-  }
-}
-
-For BAR CHART:
-{
-  "type": "bar",
-  "title": "Descriptive title for the bar chart",
-  "data": {
-    "labels": ["string array of bar labels"],
-    "datasets": [
-      {
-        "label": "dataset name",
-        "data": [number array of values],
-        "backgroundColor": ["optional string array of hex colors"]
-      }
-    ]
-  },
-  "config": {
-    "showLegend": true,
-    "xAxisLabel": "X axis description",
-    "yAxisLabel": "Y axis description"
-  }
-}
-
-For TABLE:
-{
-  "type": "table",
-  "title": "Descriptive title for the table",
-  "data": {
-    "headers": ["string array of column headers"],
-    "rows": [
-      ["mixed array of strings and numbers for each row"]
-    ]
-  },
-  "config": {
-    "sortable": true,
-    "searchable": true
-  }
-}
-
-VALIDATION RULES:
-- type must be exactly: "pie", "scatter", "table", "bar", or "line"
-- data structure must match the exact format above
-- All numeric values must be proper JavaScript numbers (not strings)
-- Colors should be valid hex codes like "#FF6384"
-- Include as many data points as possible (don't artificially limit)
-- Ensure the response is valid JSON that can be parsed by JSON.parse()
-
-Create the most appropriate visualization for the user's request using the complete dataset.`;
+Please analyze the user's request above and generate the appropriate JavaScript function for the requested visualization type.`;
 
     try {
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-4",
-        messages: [{ role: "user", content: prompt }],
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: fullPrompt }],
         temperature: 0.1,
+        max_tokens: 2000, // Increased for the structured response
       });
 
       const response = completion.choices[0]?.message?.content;
@@ -343,12 +245,102 @@ Create the most appropriate visualization for the user's request using the compl
       console.log("OpenAI Response:", response); // Debug log
 
       try {
-        const parsed = JSON.parse(response);
-        console.log("Parsed response:", parsed); // Debug log
+        // Parse the structured text response
+        const structuredResponse = this.parseStructuredResponse(response);
+        console.log("Structured response:", structuredResponse); // Debug log
 
-        // Validate and normalize the response to ensure type compliance
-        const validatedResponse = this.validateAndNormalizeResponse(parsed);
-        return validatedResponse;
+        // Check if there's an error in the response
+        if (structuredResponse.error) {
+          // Return a response with error information
+          return {
+            id: this.generateId(),
+            type: "table",
+            title: "Visualization Request Error",
+            data: {
+              headers: ["Error"],
+              rows: [[structuredResponse.error]],
+            },
+            config: {},
+            methodology: structuredResponse.methodology,
+            rationale: structuredResponse.rationale,
+            error: structuredResponse.error,
+            createdAt: new Date().toISOString(),
+          };
+        }
+
+        // Extract the function code from the function field
+        const functionCode = structuredResponse.function;
+        if (!functionCode || typeof functionCode !== "string") {
+          throw new Error(
+            "Invalid response: missing or invalid function field"
+          );
+        }
+
+        console.log("Function code received:", functionCode); // Debug log
+
+        // Parse the function string and create an executable function
+        // Handle both function declarations and expressions
+        let processingFunction: (
+          companies: SaaSCompany[]
+        ) => Record<string, unknown>;
+
+        try {
+          // Try to create function from the raw code
+          processingFunction = new Function(
+            "companies",
+            `return (${functionCode})(companies);`
+          )();
+        } catch (funcError) {
+          console.warn(
+            "Direct function creation failed, trying alternative approach:",
+            funcError
+          );
+
+          // Alternative: wrap in an immediately invoked function expression
+          const wrappedCode = `
+            (function() {
+              const userFunction = ${functionCode};
+              return function(companies) {
+                return userFunction(companies);
+              };
+            })()
+          `;
+
+          processingFunction = eval(wrappedCode);
+        }
+
+        // Execute the function with the data
+        const result = processingFunction(
+          request.data
+        ) as unknown as VisualizationFunctionResult;
+        console.log("Function execution result:", result); // Debug log
+
+        // Validate the result structure
+        if (!result || typeof result !== "object") {
+          throw new Error("Function did not return a valid object");
+        }
+
+        if (!result.type || !result.title || !result.data) {
+          throw new Error(
+            "Function result missing required fields: type, title, or data"
+          );
+        }
+
+        // Convert to our visualization response format
+        const visualizationResult =
+          result as unknown as VisualizationFunctionResult;
+        return {
+          id: this.generateId(),
+          type: visualizationResult.type,
+          title: visualizationResult.title,
+          data: visualizationResult.data as unknown as VisualizationData,
+          config:
+            (visualizationResult.config as unknown as VisualizationConfig) ||
+            {},
+          methodology: structuredResponse.methodology,
+          rationale: structuredResponse.rationale,
+          createdAt: new Date().toISOString(),
+        };
       } catch (parseError) {
         console.error("Failed to parse OpenAI response:", parseError);
         console.error("Raw response:", response);
@@ -362,359 +354,111 @@ Create the most appropriate visualization for the user's request using the compl
     }
   }
 
+  private generateId(): string {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  }
+
+  private parseStructuredResponse(
+    response: string
+  ): StructuredCallbackResponse {
+    const lines = response.split("\n");
+    let methodology = "";
+    let rationale = "";
+    let functionCode = "";
+    let error = "";
+
+    let currentSection = "";
+
+    for (const line of lines) {
+      if (line.startsWith("METHODOLOGY:")) {
+        currentSection = "methodology";
+        methodology = line.substring("METHODOLOGY:".length).trim();
+      } else if (line.startsWith("VISUALIZATION RATIONALE:")) {
+        currentSection = "rationale";
+        rationale = line.substring("VISUALIZATION RATIONALE:".length).trim();
+      } else if (line.startsWith("FUNCTION:")) {
+        currentSection = "function";
+        functionCode = line.substring("FUNCTION:".length).trim();
+      } else if (line.startsWith("ERROR:")) {
+        currentSection = "error";
+        error = line.substring("ERROR:".length).trim();
+      } else if (currentSection && line.trim()) {
+        // Continue accumulating content for the current section
+        if (currentSection === "methodology") {
+          methodology += " " + line.trim();
+        } else if (currentSection === "rationale") {
+          rationale += " " + line.trim();
+        } else if (currentSection === "function") {
+          if (functionCode) functionCode += "\n" + line;
+          else functionCode = line;
+        } else if (currentSection === "error") {
+          error += " " + line.trim();
+        }
+      }
+    }
+
+    return {
+      methodology: methodology.trim(),
+      rationale: rationale.trim(),
+      function: functionCode.trim(),
+      error: error.trim() || undefined,
+    };
+  }
+
   private async processVisualizationUpdate(
     update: VisualizationUpdate
   ): Promise<VisualizationResponse> {
-    const prompt = `
-Update this visualization based on the user's request.
+    // For now, create a basic response from the update
+    // This could be enhanced to handle incremental updates
+    return {
+      id: update.id,
+      type: "table", // Default type
+      title: "Updated Visualization",
+      data: {
+        headers: ["Status"],
+        rows: [["Update processed"]],
+      },
+      config: update.currentConfig,
+      createdAt: new Date().toISOString(),
+    };
+  }
 
-Current visualization config: ${JSON.stringify(update.currentConfig, null, 2)}
-
-User request: "${update.prompt}"
-
-Return updated config as JSON with the same structure.
-`;
-
-    const completion = await this.openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.1,
-    });
-
-    const response = completion.choices[0]?.message?.content;
-    if (!response) {
-      throw new Error("No response from OpenAI");
-    }
-
+  private getStoredVisualizations(): VisualizationResponse[] {
     try {
-      const parsed = JSON.parse(response);
-      const validatedResponse = this.validateAndNormalizeResponse(parsed);
-      return {
-        ...validatedResponse,
-        id: update.id, // Keep the original ID for updates
-      };
-    } catch {
-      throw new Error("Failed to parse update response");
+      const stored = localStorage.getItem("saas_visualizations");
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error("Failed to load stored visualizations:", error);
+      return [];
     }
   }
 
   private fallbackVisualization(
     request: VisualizationRequest
   ): VisualizationResponse {
-    const prompt = request.prompt.toLowerCase();
-
-    // Try to determine the requested chart type from the prompt
-    if (prompt.includes("scatter") || prompt.includes("correlation") || prompt.includes("relationship")) {
-      return this.createFallbackScatterPlot(request);
-    } else if (prompt.includes("bar") || prompt.includes("histogram")) {
-      return this.createFallbackBarChart(request);
-    } else if (prompt.includes("table") || prompt.includes("list")) {
-      return this.createFallbackTable(request);
-    } else {
-      // Default to pie chart for industry breakdown
-      return this.createFallbackPieChart(request);
-    }
-  }
-
-  private createFallbackPieChart(request: VisualizationRequest): VisualizationResponse {
-    // Simple fallback for industry breakdown pie chart
-    const industryCount: Record<string, number> = {};
-    request.data.forEach((company) => {
-      const industry = company.industry || "Unknown";
-      industryCount[industry] = (industryCount[industry] || 0) + 1;
-    });
-
-    const sortedIndustries = Object.entries(industryCount)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 10); // Top 10 industries
-
-    const data: PieChartData = {
-      labels: sortedIndustries.map(([industry]) => industry),
-      values: sortedIndustries.map(([, count]) => count),
-      colors: [
-        "#FF6384",
-        "#36A2EB",
-        "#FFCE56",
-        "#4BC0C0",
-        "#9966FF",
-        "#FF9F40",
-        "#FF6384",
-        "#C9CBCF",
-        "#4BC0C0",
-        "#FF6384",
-      ],
-    };
-
-    return {
-      id: this.generateId(),
-      type: "pie",
-      title: "Top 10 SaaS Industries by Company Count",
-      data,
-      config: {
-        colors: data.colors,
-        showLegend: true,
-        title: "Industry Distribution",
-      },
-      createdAt: new Date().toISOString(),
-    };
-  }
-
-  private createFallbackScatterPlot(request: VisualizationRequest): VisualizationResponse {
-    // Create a scatter plot of founded year vs valuation
-    const points = request.data.slice(0, 20).map((company) => {
-      // Simple parsing of valuation for fallback
-      let valuation = 0;
-      const valStr = company.valuation;
-      if (valStr && valStr !== "N/A") {
-        const cleanStr = valStr.replace(/[$,]/g, "");
-        if (cleanStr.endsWith("T")) {
-          valuation = parseFloat(cleanStr.slice(0, -1)) * 1000000000000;
-        } else if (cleanStr.endsWith("B")) {
-          valuation = parseFloat(cleanStr.slice(0, -1)) * 1000000000;
-        } else if (cleanStr.endsWith("M")) {
-          valuation = parseFloat(cleanStr.slice(0, -1)) * 1000000;
-        } else {
-          valuation = parseFloat(cleanStr) || 0;
-        }
-      }
-
-      return {
-        x: company.foundedYear,
-        y: valuation,
-        label: company.name,
-        metadata: {
-          industry: company.industry,
-          hq: company.hq,
-        },
-      };
-    }).filter((point) => point.x > 0 && point.y > 0); // Filter out invalid points
-
-    const data: ScatterPlotData = {
-      points,
-    };
-
-    return {
-      id: this.generateId(),
-      type: "scatter",
-      title: "Company Founded Year vs Valuation",
-      data,
-      config: {
-        xAxisLabel: "Founded Year",
-        yAxisLabel: "Valuation ($)",
-        showGrid: true,
-      },
-      createdAt: new Date().toISOString(),
-    };
-  }
-
-  private createFallbackBarChart(request: VisualizationRequest): VisualizationResponse {
-    // Create a bar chart of top companies by valuation
-    const companies = request.data
-      .map((company) => {
-        let valuation = 0;
-        const valStr = company.valuation;
-        if (valStr && valStr !== "N/A") {
-          const cleanStr = valStr.replace(/[$,]/g, "");
-          if (cleanStr.endsWith("T")) {
-            valuation = parseFloat(cleanStr.slice(0, -1)) * 1000000000000;
-          } else if (cleanStr.endsWith("B")) {
-            valuation = parseFloat(cleanStr.slice(0, -1)) * 1000000000;
-          } else if (cleanStr.endsWith("M")) {
-            valuation = parseFloat(cleanStr.slice(0, -1)) * 1000000;
-          } else {
-            valuation = parseFloat(cleanStr) || 0;
-          }
-        }
-        return { ...company, parsedValuation: valuation };
-      })
-      .filter((company) => company.parsedValuation > 0)
-      .sort((a, b) => b.parsedValuation - a.parsedValuation)
-      .slice(0, 10);
-
-    const data: BarChartData = {
-      labels: companies.map((company) => company.name),
-      datasets: [
-        {
-          label: "Valuation",
-          data: companies.map((company) => company.parsedValuation),
-          backgroundColor: ["#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#06B6D4", "#84CC16", "#F97316", "#EC4899", "#6B7280"],
-        },
-      ],
-    };
-
-    return {
-      id: this.generateId(),
-      type: "bar",
-      title: "Top 10 SaaS Companies by Valuation",
-      data,
-      config: {
-        showLegend: false,
-        xAxisLabel: "Company",
-        yAxisLabel: "Valuation ($)",
-      },
-      createdAt: new Date().toISOString(),
-    };
-  }
-
-  private createFallbackTable(request: VisualizationRequest): VisualizationResponse {
-    // Create a table with company information
-    const headers = ["Company", "Industry", "Founded", "Valuation", "Employees"];
-    const rows = request.data.slice(0, 20).map((company) => [
-      company.name,
-      company.industry,
-      company.foundedYear.toString(),
-      company.valuation,
-      company.employees,
-    ]);
-
-    const data: TableData = {
-      headers,
-      rows,
-    };
+    // Provide a basic fallback visualization when AI processing fails
+    const data = request.data || [];
 
     return {
       id: this.generateId(),
       type: "table",
       title: "SaaS Companies Overview",
-      data,
+      data: {
+        headers: ["Company", "Industry", "Funding", "Employees"],
+        rows: data
+          .slice(0, 10)
+          .map((company: SaaSCompany) => [
+            company.name || "Unknown",
+            company.industry || "Unknown",
+            company.totalFunding || "N/A",
+            company.employees || "N/A",
+          ]),
+      },
       config: {
         sortable: true,
         searchable: true,
       },
       createdAt: new Date().toISOString(),
     };
-  }
-
-  private getStoredVisualizations(): VisualizationResponse[] {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  }
-
-  private validateAndNormalizeResponse(parsed: unknown): VisualizationResponse {
-    // Ensure the response has the required structure
-    if (!parsed || typeof parsed !== 'object') {
-      throw new Error('Invalid response structure');
-    }
-
-    const response = parsed as Record<string, unknown>;
-
-    // Validate and normalize the type
-    const validTypes = ['pie', 'scatter', 'table', 'bar', 'line'];
-    const type = typeof response.type === 'string' && validTypes.includes(response.type)
-      ? response.type
-      : 'table';
-
-    if (response.type && !validTypes.includes(response.type as string)) {
-      console.warn(`Invalid type "${response.type}", defaulting to "table"`);
-    }
-
-    // Ensure required fields exist
-    const title = typeof response.title === 'string' ? response.title : 'Data Visualization';
-
-    const data = (response.data && typeof response.data === 'object') ? response.data as Record<string, unknown> : this.getDefaultDataForType(type);
-
-    const config = (response.config && typeof response.config === 'object') ? response.config as Record<string, unknown> : {};
-
-    // Type-specific validation and normalization
-    switch (type) {
-      case 'pie':
-        this.validatePieChartData(data);
-        break;
-      case 'scatter':
-        this.validateScatterPlotData(data);
-        break;
-      case 'bar':
-        this.validateBarChartData(data);
-        break;
-      case 'table':
-        this.validateTableData(data);
-        break;
-    }
-
-    return {
-      id: this.generateId(),
-      type: type as "pie" | "scatter" | "table" | "bar" | "line",
-      title,
-      data: data as unknown as VisualizationData,
-      config: config as unknown as VisualizationConfig,
-      createdAt: new Date().toISOString(),
-    };
-  }
-
-  private getDefaultDataForType(type: string): Record<string, unknown> {
-    switch (type) {
-      case 'pie':
-        return { labels: [], values: [], colors: [] };
-      case 'scatter':
-        return { points: [] };
-      case 'bar':
-        return { labels: [], datasets: [] };
-      case 'table':
-        return { headers: [], rows: [] };
-      default:
-        return { headers: [], rows: [] };
-    }
-  }
-
-  private validatePieChartData(data: Record<string, unknown>): void {
-    if (!Array.isArray(data.labels)) data.labels = [];
-    if (!Array.isArray(data.values)) data.values = [];
-    if (!Array.isArray(data.colors)) data.colors = [];
-
-    // Ensure values are numbers
-    data.values = (data.values as unknown[]).map((v: unknown) => typeof v === 'number' ? v : parseFloat(String(v)) || 0);
-
-    // Ensure labels are strings
-    data.labels = (data.labels as unknown[]).map((l: unknown) => String(l || ''));
-  }
-
-  private validateScatterPlotData(data: Record<string, unknown>): void {
-    if (!Array.isArray(data.points)) data.points = [];
-
-    // Validate each point
-    data.points = (data.points as unknown[]).map((point: unknown) => {
-      const p = point as Record<string, unknown>;
-      return {
-        x: typeof p.x === 'number' ? p.x : parseFloat(String(p.x)) || 0,
-        y: typeof p.y === 'number' ? p.y : parseFloat(String(p.y)) || 0,
-        label: String(p.label || ''),
-        metadata: (p.metadata && typeof p.metadata === 'object') ? p.metadata : {},
-      };
-    });
-  }
-
-  private validateBarChartData(data: Record<string, unknown>): void {
-    if (!Array.isArray(data.labels)) data.labels = [];
-    if (!Array.isArray(data.datasets)) data.datasets = [];
-
-    // Validate datasets
-    data.datasets = (data.datasets as unknown[]).map((dataset: unknown) => {
-      const ds = dataset as Record<string, unknown>;
-      return {
-        label: String(ds.label || ''),
-        data: Array.isArray(ds.data)
-          ? (ds.data as unknown[]).map((v: unknown) => typeof v === 'number' ? v : parseFloat(String(v)) || 0)
-          : [],
-        backgroundColor: Array.isArray(ds.backgroundColor) ? ds.backgroundColor : undefined,
-      };
-    });
-
-    // Ensure labels are strings
-    data.labels = (data.labels as unknown[]).map((l: unknown) => String(l || ''));
-  }
-
-  private validateTableData(data: Record<string, unknown>): void {
-    if (!Array.isArray(data.headers)) data.headers = [];
-    if (!Array.isArray(data.rows)) data.rows = [];
-
-    // Ensure headers are strings
-    data.headers = (data.headers as unknown[]).map((h: unknown) => String(h || ''));
-
-    // Ensure rows are arrays
-    data.rows = (data.rows as unknown[]).map((row: unknown) =>
-      Array.isArray(row) ? row.map((cell: unknown) => cell) : []
-    );
-  }  private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
   }
 }

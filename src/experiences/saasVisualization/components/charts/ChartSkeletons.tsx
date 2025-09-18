@@ -37,7 +37,11 @@ export const ChartSkeleton: React.FC<ChartSkeletonProps> = ({ type }) => {
       case "bar":
         return (
           <div className="chart-skeleton">
-            <svg width="500" height="300" className="border border-gray-200 rounded-lg bg-white">
+            <svg
+              width="500"
+              height="300"
+              className="border border-gray-200 rounded-lg bg-white"
+            >
               {/* Bar chart skeleton - animated rectangles */}
               <rect width="500" height="300" fill="#f9fafb" />
               {Array.from({ length: 5 }, (_, i) => (
@@ -59,7 +63,11 @@ export const ChartSkeleton: React.FC<ChartSkeletonProps> = ({ type }) => {
       case "scatter":
         return (
           <div className="chart-skeleton">
-            <svg width="400" height="300" className="border border-gray-200 rounded-lg bg-white">
+            <svg
+              width="400"
+              height="300"
+              className="border border-gray-200 rounded-lg bg-white"
+            >
               {/* Scatter plot skeleton - animated circles */}
               <rect width="400" height="300" fill="#f9fafb" />
               {Array.from({ length: 8 }, (_, i) => (

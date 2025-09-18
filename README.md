@@ -70,6 +70,8 @@ The app uses real data from `top_100_saas_companies_2025.csv` containing:
    - Create a new API key
    - Add it to your `.env` file
 
+> **Note**: The app uses `gpt-4o-mini` by default for optimal performance and structured outputs support. You can override this in your `.env` file if needed.
+
 ## 🚀 Running the App
 
 ### Development
@@ -122,7 +124,7 @@ src/
 |----------|-------------|----------|
 | `VITE_OPENAI_API_KEY` | Your OpenAI API key | Yes |
 | `VITE_OPENAI_API_BASE_URL` | Custom OpenAI API endpoint | No |
-| `VITE_OPENAI_MODEL` | OpenAI model to use (default: gpt-4) | No |
+| `VITE_OPENAI_MODEL` | OpenAI model to use (default: gpt-4o-mini) | No |
 | `VITE_API_URL` | External API URL for additional services | No |
 
 ## 🤝 Contributing
