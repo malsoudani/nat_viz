@@ -1,15 +1,18 @@
 // SaaS Data Visualization Types
 export interface SaaSCompany {
   id: string;
-  name: string;
-  industry: string;
-  foundedYear: number;
-  valuation: number; // in billions USD
-  arr: number; // Annual Recurring Revenue in millions USD
-  employees: number;
-  location: string;
-  investors: string[];
-  description: string;
+  name: string; // Company Name
+  foundedYear: number; // Founded Year
+  hq: string; // HQ location
+  industry: string; // Industry
+  totalFunding: string; // Total Funding (with $ and M/B suffixes)
+  arr: string; // ARR (with $ and M/B suffixes)
+  valuation: string; // Valuation (with $ and M/B suffixes)
+  employees: string; // Employees (with commas)
+  topInvestors: string; // Top Investors (comma-separated)
+  product: string; // Product
+  g2Rating: number; // G2 Rating
+  description?: string; // Optional description derived from product
 }
 
 export interface PieChartData {

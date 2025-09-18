@@ -14,69 +14,59 @@ import {
 const STORAGE_KEY = "saas_visualizations";
 const DATA_STORAGE_KEY = "saas_companies_data";
 
-// Mock SaaS data for demonstration
-const mockSaaSData: SaaSCompany[] = [
-  {
-    id: "1",
-    name: "Stripe",
-    industry: "Fintech",
-    foundedYear: 2010,
-    valuation: 95,
-    arr: 12000,
-    employees: 8000,
-    location: "San Francisco, CA",
-    investors: ["Sequoia Capital", "Andreessen Horowitz", "General Catalyst"],
-    description: "Payment processing platform for internet businesses",
-  },
-  {
-    id: "2",
-    name: "Databricks",
-    industry: "Data Analytics",
-    foundedYear: 2013,
-    valuation: 43,
-    arr: 1400,
-    employees: 5000,
-    location: "San Francisco, CA",
-    investors: ["Andreessen Horowitz", "Battery Ventures"],
-    description: "Unified analytics platform powered by Apache Spark",
-  },
-  {
-    id: "3",
-    name: "Canva",
-    industry: "Design",
-    foundedYear: 2012,
-    valuation: 40,
-    arr: 1500,
-    employees: 3500,
-    location: "Sydney, Australia",
-    investors: ["Sequoia Capital", "Blackbird Ventures"],
-    description: "Online design platform for non-designers",
-  },
-  {
-    id: "4",
-    name: "Notion",
-    industry: "Productivity",
-    foundedYear: 2016,
-    valuation: 10,
-    arr: 300,
-    employees: 200,
-    location: "San Francisco, CA",
-    investors: ["Index Ventures", "GV"],
-    description: "All-in-one workspace for notes, docs, and projects",
-  },
-  {
-    id: "5",
-    name: "Figma",
-    industry: "Design",
-    foundedYear: 2012,
-    valuation: 10,
-    arr: 400,
-    employees: 800,
-    location: "San Francisco, CA",
-    investors: ["Index Ventures", "Greylock Partners"],
-    description: "Collaborative interface design tool",
-  },
-];
+// Import the CSV data
+import csvData from "../../top_100_saas_companies_2025.csv?raw";
+
+// Parse CSV data into SaaSCompany format
+const parseCSVData = (): SaaSCompany[] => {
+  const lines = csvData.trim().split("\n");
+
+  return lines.slice(1).map((line, index) => {
+    // Handle quoted fields that may contain commas
+    const parseCSVLine = (csvLine: string): string[] => {
+      const result: string[] = [];
+      let current = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < csvLine.length; i++) {
+        const char = csvLine[i];
+
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === "," && !inQuotes) {
+          result.push(current.trim());
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+
+      result.push(current.trim());
+      return result;
+    };
+
+    const values = parseCSVLine(line);
+
+    return {
+      id: (index + 1).toString(),
+      name: values[0] || "",
+      foundedYear: parseInt(values[1]) || 0,
+      hq: values[2]?.replace(/"/g, "") || "",
+      industry: values[3] || "",
+      totalFunding: values[4] || "N/A",
+      arr: values[5] || "N/A",
+      valuation: values[6] || "N/A",
+      employees: values[7]?.replace(/"/g, "") || "0",
+      topInvestors: values[8] || "",
+      product: values[9] || "",
+      g2Rating: parseFloat(values[10]) || 0,
+      description: values[9] || "", // Use product as description
+    };
+  });
+};
+
+// Load real SaaS data from CSV
+const realSaaSData: SaaSCompany[] = parseCSVData();
 
 export class SaaSVisualizationClient implements ISaaSVisualizationClient {
   private openai: OpenAI;
@@ -96,8 +86,8 @@ export class SaaSVisualizationClient implements ISaaSVisualizationClient {
         if (stored) {
           return JSON.parse(stored);
         }
-        // Return mock data if nothing in storage
-        return mockSaaSData;
+        // Return real data if nothing in storage
+        return realSaaSData;
       },
       (error) => ({
         status: 500,
@@ -188,12 +178,29 @@ export class SaaSVisualizationClient implements ISaaSVisualizationClient {
     const prompt = `
 You are a data visualization expert. Given this dataset of SaaS companies and the user's request, create an appropriate visualization.
 
-Dataset structure:
-${JSON.stringify(request.data.slice(0, 5), null, 2)}... (showing first 5 of ${
-      request.data.length
-    } companies)
+Dataset structure (Top 100 SaaS Companies 2025):
+Each company has these fields:
+- name: Company name
+- foundedYear: Year founded
+- hq: Headquarters location
+- industry: Industry category
+- totalFunding: Total funding raised (format: $XM, $XB, etc.)
+- arr: Annual Recurring Revenue (format: $XM, $XB, etc.)
+- valuation: Company valuation (format: $XM, $XB, etc.)
+- employees: Number of employees (may contain commas)
+- topInvestors: Key investors (comma-separated)
+- product: Main product/service
+- g2Rating: G2 rating (0-5 scale)
+
+Sample data:
+${JSON.stringify(request.data.slice(0, 3), null, 2)}
 
 User request: "${request.prompt}"
+
+IMPORTANT: When working with financial data (funding, ARR, valuation):
+- Parse currency values: $1.5M = 1,500,000; $2B = 2,000,000,000
+- Handle "N/A" values as 0 or exclude from calculations
+- For employee counts, remove commas: "7,388" = 7388
 
 Return a JSON object with:
 - type: "pie" | "scatter" | "table" | "bar" | "line"
@@ -203,9 +210,9 @@ Return a JSON object with:
 
 For different visualization types:
 - pie: { labels: string[], values: number[], colors?: string[] }
-- scatter: { points: Array<{x: number, y: number, label: string}> }
+- scatter: { points: Array<{x: number, y: number, label: string, metadata?: Record<string, unknown>}> }
 - table: { headers: string[], rows: Array<Array<string|number>> }
-- bar: { labels: string[], datasets: Array<{label: string, data: number[]}> }
+- bar: { labels: string[], datasets: Array<{label: string, data: number[], backgroundColor?: string[]}> }
 `;
 
     const completion = await this.openai.chat.completions.create({
@@ -273,21 +280,41 @@ Return updated config as JSON with the same structure.
     // Simple fallback for industry breakdown pie chart
     const industryCount: Record<string, number> = {};
     request.data.forEach((company) => {
-      industryCount[company.industry] =
-        (industryCount[company.industry] || 0) + 1;
+      const industry = company.industry || "Unknown";
+      industryCount[industry] = (industryCount[industry] || 0) + 1;
     });
 
+    const sortedIndustries = Object.entries(industryCount)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10); // Top 10 industries
+
     const data: PieChartData = {
-      labels: Object.keys(industryCount),
-      values: Object.values(industryCount),
+      labels: sortedIndustries.map(([industry]) => industry),
+      values: sortedIndustries.map(([, count]) => count),
+      colors: [
+        "#FF6384",
+        "#36A2EB",
+        "#FFCE56",
+        "#4BC0C0",
+        "#9966FF",
+        "#FF9F40",
+        "#FF6384",
+        "#C9CBCF",
+        "#4BC0C0",
+        "#FF6384",
+      ],
     };
 
     return {
       id: this.generateId(),
       type: "pie",
-      title: "Industry Breakdown",
+      title: "Top 10 SaaS Industries by Company Count",
       data,
-      config: { colors: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0"] },
+      config: {
+        colors: data.colors,
+        showLegend: true,
+        title: "Industry Distribution",
+      },
       createdAt: new Date().toISOString(),
     };
   }
