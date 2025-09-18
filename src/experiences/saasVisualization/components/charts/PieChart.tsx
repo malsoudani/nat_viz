@@ -26,45 +26,100 @@ export const PieChart: React.FC<PieChartProps> = ({ data }) => {
 
   const chartColors = colors || defaultColors;
 
+  // Calculate pie chart paths
+  const radius = 80;
+  const centerX = 100;
+  const centerY = 100;
+
+  let cumulativeAngle = 0;
+
+  const pieSlices = values.map((value, index) => {
+    const percentage = total > 0 ? value / total : 0;
+    const angle = percentage * 2 * Math.PI;
+    const startAngle = cumulativeAngle;
+    const endAngle = cumulativeAngle + angle;
+
+    // Calculate path for pie slice
+    const x1 = centerX + radius * Math.cos(startAngle);
+    const y1 = centerY + radius * Math.sin(startAngle);
+    const x2 = centerX + radius * Math.cos(endAngle);
+    const y2 = centerY + radius * Math.sin(endAngle);
+
+    const largeArcFlag = angle > Math.PI ? 1 : 0;
+
+    const pathData = [
+      `M ${centerX} ${centerY}`,
+      `L ${x1} ${y1}`,
+      `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+      "Z",
+    ].join(" ");
+
+    cumulativeAngle = endAngle;
+
+    return {
+      pathData,
+      color: chartColors[index % chartColors.length],
+      percentage: (percentage * 100).toFixed(1),
+      label: labels[index],
+      value,
+    };
+  });
+
   return (
     <div className="pie-chart">
       <div className="flex flex-col lg:flex-row items-center justify-center h-full">
-        {/* Chart visualization placeholder */}
+        {/* SVG Pie Chart */}
         <div className="flex-1 flex items-center justify-center mb-4 lg:mb-0 lg:mr-8">
-          <div className="w-64 h-64 bg-gray-100 rounded-full flex items-center justify-center">
-            <span className="text-gray-500 text-sm">Pie Chart</span>
-          </div>
+          <svg
+            width="220"
+            height="220"
+            viewBox="0 0 200 200"
+            className="drop-shadow-sm"
+          >
+            {pieSlices.map((slice, index) => (
+              <path
+                key={index}
+                d={slice.pathData}
+                fill={slice.color}
+                stroke="white"
+                strokeWidth="2"
+                className="hover:opacity-80 transition-opacity cursor-pointer"
+              />
+            ))}
+            {/* Center circle for better visual */}
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r="30"
+              fill="white"
+              stroke="#e5e7eb"
+              strokeWidth="1"
+            />
+          </svg>
         </div>
 
         {/* Legend */}
         <div className="flex-1 max-w-md">
           <div className="space-y-2">
-            {labels.map((label, index) => {
-              const percentage =
-                total > 0 ? ((values[index] / total) * 100).toFixed(1) : "0";
-              return (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div
-                      className="w-4 h-4 rounded mr-3 flex-shrink-0"
-                      style={{
-                        backgroundColor:
-                          chartColors[index % chartColors.length],
-                      }}
-                    />
-                    <span className="text-sm text-gray-700">{label}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-sm font-medium text-gray-900">
-                      {values[index]}
-                    </span>
-                    <span className="text-xs text-gray-500 ml-1">
-                      ({percentage}%)
-                    </span>
-                  </div>
+            {pieSlices.map((slice, index) => (
+              <div key={index} className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div
+                    className="w-4 h-4 rounded mr-3 flex-shrink-0"
+                    style={{ backgroundColor: slice.color }}
+                  />
+                  <span className="text-sm text-gray-700">{slice.label}</span>
                 </div>
-              );
-            })}
+                <div className="text-right">
+                  <span className="text-sm font-medium text-gray-900">
+                    {slice.value}
+                  </span>
+                  <span className="text-xs text-gray-500 ml-1">
+                    ({slice.percentage}%)
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
